@@ -138,6 +138,18 @@ def main(
     step: str = "2h",
     timestamp: Optional[str] = None,
 ):
+    """Run the data preparation pipeline.
+
+    It uses trajectories as calculated in the FAIRSEA project,
+    and coastline data from www.ngdc.noaa.gov/mgg/shorelines.
+
+    Args:
+        trajectory_file: file with trajectory information
+        coastline_file: shapefile with coastline information
+        window: time window size of trajectory snapshots
+        step: offset between two consecutive snapshots
+        timestamp: logging timestamp to track pipeline run
+    """
     # Open voyages file
     with open(trajectory_file, "rb") as file:
         df = pickle.load(file=file)

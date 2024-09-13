@@ -20,9 +20,25 @@ def voyage_array_from_points(
     dtype: np.dtype = np.float32,
     filename: str = None,
 ):
+    """Create a rasterized voyage array from a collection of coordinates.
+
+    Additionally, it is possible to add layers with e.g. coastline information.
+
+    Args:
+        data: data of one voyage, has all the coordinates in the geometry column
+        coastlines: coastlines metadata
+        resolution: size of the output image
+        dtype: datatype of the output array
+        filename: file to save the array to
+
+    Returns:
+        a NumPy ndarray containing the rasterized voyage with possible coastline data
+    """
+    # Find a box (center, dx, and dy) that envelopes the trajectory
     minx, miny, maxx, maxy = data.total_bounds
     center = box(minx, miny, maxx, maxy).centroid
 
+    # Create a square box of at least radius 5km from this envelope
     diagonal = max(
         (maxy - miny) / 2,  # divide by 2 to go from diameter to radius
         (maxx - minx) / 2,  # idem
@@ -33,6 +49,7 @@ def voyage_array_from_points(
 
     transform = from_bounds(*square_box.total_bounds, resolution, resolution)
 
+    # Create a line from the coordinates, and rasterize the line
     travel_line = gpd.GeoDataFrame(
         [{"geometry": LineString(data.geometry)}], crs="EPSG:4326"
     )
@@ -44,6 +61,7 @@ def voyage_array_from_points(
         transform=transform,
         dtype=dtype,
     )
+    # Add coastline geometries to the trajectory
     if coastlines is not None:
         try:
             coastline = coastlines.overlay(square_box, how="intersection")
@@ -58,11 +76,14 @@ def voyage_array_from_points(
                 [np.expand_dims(image, axis=0), np.expand_dims(coast_raster, axis=0)],
                 axis=0,
             )
+        # If there is no overlap, GeoPandas raises a ValueError.
+        # In that case, add a layer of zeros
         except ValueError:
             image = np.concat(
                 [np.expand_dims(image, axis=0), np.zeros((1, resolution, resolution))],
                 axis=0,
             )
+    # Export each individual array
     assert image.shape == (2, resolution, resolution)
     if filename is not None:
         with open(f"{filename}.npy", "wb") as file:
@@ -78,13 +99,27 @@ def time_windowing(
     prefix: str = None,
     export_dir: str = ".",
 ):
+    """Create time-windowed snapshots of the voyage, and rasterize the snapshots.
+
+    Args:
+        dataf: voyage coordinates
+        window_size: voyage duration in one snapshot
+        step_size: time difference between each snapshot
+        coastlines: coastline metadata
+        prefix: voyage identifier used in output filenames
+        export_dir: folder to save output files
+
+    Returns:
+        rasterized voyage snapshots
+    """
     df_index = dataf.index
 
-    # convert to pandas Timedelta
+    # convert window and step to pandas Timedelta
     window_size = pd.Timedelta(window_size)
     step_size = pd.Timedelta(step_size)
     timesteps = pd.date_range(start=df_index[0], end=df_index[-1], freq=step_size)
 
+    # Rasterize each snapshot of the voyage
     images: List[np.ndarray] = []
     for start_time in timesteps:
         image = None
@@ -93,6 +128,7 @@ def time_windowing(
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
 
+        # We cannot say anything about a trajectory that is just 2 points
         if data.shape[0] > 2:
             image = voyage_array_from_points(
                 data,
@@ -113,11 +149,27 @@ def convert_dataframe(
     step_size: str = "2h",
     timestamp: Optional[str] = None,
 ):
+    """Convert a dataframe full of voyages to rasterized voyage snapshots.
+
+    These snapshots can optionally contain data about coastlines.
+    In the future we would add functionality for more layers, e.g. EEZ information.
+
+    Args:
+        dataf: voyage data
+        coastlines: coastline data
+        window_size: voyage duration in each snapshot
+        step_size: time difference between each snapshot
+        timestamp: label used to identify the preparation run
+
+    Returns:
+        a list of voyage snapshots
+    """
     images = []
 
     export_dir = f"./data/processed/processed_{timestamp}"
     os.mkdir(export_dir)
 
+    # Iterate over combination of (ship identifier, voyage number)
     for xlabel in tqdm(dataf.droplevel(-1).index.unique()):
         images += time_windowing(
             dataf.loc[xlabel],

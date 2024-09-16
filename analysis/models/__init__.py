@@ -1,0 +1,1 @@
+from coastal_voyage_model import CoastalVoyageModel

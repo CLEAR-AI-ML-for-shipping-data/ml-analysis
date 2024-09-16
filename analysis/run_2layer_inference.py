@@ -2,37 +2,25 @@ import argparse
 import os
 import tomllib
 
-from loguru import logger
+import numpy as np
 import pandas as pd
 import torch
-from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
-import numpy as np
-from skimage.transform import resize
-from sklearn import cluster
 
 # Provide these to the namespace for the read models
 from astromorph.astromorph.src.byol import ByolTrainer
 from astromorph.astromorph.src.datasets import FilelistDataset
-from astromorph.astromorph.src.settings import InferenceSettings
-
-
-from voyage_dataset import VoyageDataset, VoyageFilelistDataset
-
-import datetime as dt
-import pickle
-from typing import List
-
-import numpy as np
-import torch
-from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import transforms as T
-
-from astromorph.astromorph.src.byol import ByolTrainer
 from astromorph.astromorph.src.models import AstroMorphologyModel
-from voyage_dataset import VoyageFilelistDataset
+from astromorph.astromorph.src.settings import InferenceSettings
+from loguru import logger
+from skimage.transform import resize
+from sklearn import cluster
+from torch import nn
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import transforms as T
+from tqdm import tqdm
+
 from models import CoastalVoyageModel
+from voyage_dataset import VoyageDataset, VoyageFilelistDataset
 
 
 def normalize_image(image: torch.Tensor):

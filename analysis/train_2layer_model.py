@@ -26,10 +26,10 @@ augmentation_function = torch.nn.Sequential(
     T.RandomRotation(degrees=(0, 360)),
     # T.RandomApply(T.GaussianBlur((3, 3), (1.0, 2.0)), p=0.2),
     T.Normalize(
-        mean=torch.tensor([0.485, 0.456]), 
-                           # 0.406]),
-        std=torch.tensor([0.229, 0.224]), 
-                          # , 0.225]),
+        mean=torch.tensor([0.485, 0.456]),
+        # 0.406]),
+        std=torch.tensor([0.229, 0.224]),
+        # , 0.225]),
     ),
 )
 
@@ -43,5 +43,5 @@ trainer.train_model(
     test_data=test_data,
     epochs=2,
     save_file=f"trained_model_{start_time}.pt",
-    log_dir=f"runs/multilayer_{start_time}"
+    log_dir=f"runs/multilayer_{start_time}",
 )

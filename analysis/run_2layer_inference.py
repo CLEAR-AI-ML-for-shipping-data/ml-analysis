@@ -1,13 +1,10 @@
 import argparse
 import os
 import tomllib
-from typing import Union
 
 from loguru import logger
 import pandas as pd
-from torchvision import models
 import torch
-from torch.nn.functional import pad
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import numpy as np
@@ -17,7 +14,6 @@ from sklearn import cluster
 # Provide these to the namespace for the read models
 from astromorph.astromorph.src.byol import ByolTrainer
 from astromorph.astromorph.src.datasets import FilelistDataset
-from astromorph.astromorph.src.models import NLayerResnet
 from astromorph.astromorph.src.settings import InferenceSettings
 
 
@@ -35,7 +31,7 @@ from torchvision import transforms as T
 
 from astromorph.astromorph.src.byol import ByolTrainer
 from astromorph.astromorph.src.models import AstroMorphologyModel
-from voyage_dataset import VoyageDataset, VoyageFilelistDataset
+from voyage_dataset import VoyageFilelistDataset
 from models import CoastalVoyageModel
 
 

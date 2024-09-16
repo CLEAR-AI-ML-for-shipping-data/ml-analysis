@@ -1,19 +1,12 @@
 import datetime as dt
-import pickle
-from typing import List
 
-import numpy as np
 import torch
-from torch import nn
+from astromorph.astromorph.src.byol import ByolTrainer
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 
-from astromorph.astromorph.src.byol import ByolTrainer
-from astromorph.astromorph.src.models import AstroMorphologyModel
-from voyage_dataset import VoyageDataset, VoyageFilelistDataset
-
-
 from models import CoastalVoyageModel
+from voyage_dataset import VoyageFilelistDataset
 
 full_dataset = VoyageFilelistDataset("multilayer_minsize_8h_images.txt")
 

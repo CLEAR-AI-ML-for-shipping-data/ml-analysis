@@ -35,37 +35,6 @@ from voyage_dataset import VoyageFilelistDataset
 from models import CoastalVoyageModel
 
 
-
-# def pad_image_to_square(image: torch.Tensor):
-#     """Convert image to a square image.
-#
-#     The image is padded with zeros where necessary
-#
-#     Args:
-#         image: an image of shape (channels, width, height)
-#
-#     Returns: a square image of shape (channels, new_size, new_size)
-#
-#     """
-#     delta = abs(image.shape[1] - image.shape[2])
-#     fixed_axis = torch.argmax(torch.tensor(image.shape))
-#     expand_axis = 1 + (1 - (fixed_axis - 1))
-#     d1 = delta // 2
-#     d2 = delta - d1
-#
-#     pad_widths = [
-#         (d1, d2) if expand_axis == 2 else (0, 0),
-#         (d1, d2) if expand_axis == 1 else (0, 0),
-#         (0, 0),
-#     ]
-#
-#     pad_tuple = ()
-#     for padding in pad_widths:
-#         pad_tuple += padding
-#
-#     return pad(image, pad_tuple, value=0)
-
-
 def normalize_image(image: torch.Tensor):
     """Ensure that an image has pixel values between 0 and 1
 

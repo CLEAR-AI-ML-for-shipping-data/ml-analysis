@@ -2,11 +2,13 @@ import argparse
 import datetime as dt
 import os
 import pickle
+import pprint
 from typing import List, Optional, Union
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from loguru import logger
 from rasterio.features import rasterize
 from rasterio.transform import from_bounds
 from shapely.geometry import LineString, Point, box
@@ -176,7 +178,10 @@ def convert_dataframe(
     images = []
 
     export_dir = f"./data/processed/processed_{timestamp}"
+
+    logger.info(f"Creating folder {export_dir}")
     os.mkdir(export_dir)
+    logger.info(f"Data will be exported to folder {export_dir}")
 
     # Iterate over combination of (ship identifier, voyage number)
     for xlabel in tqdm(dataf.droplevel(-1).index.unique()):
@@ -229,6 +234,13 @@ def main(
 
     # Get the total bounding box of all voyages, and apply to coastlines data
     minx, miny, maxx, maxy = df.geometry.total_bounds
+    bbox_dict = {
+        "x_min": float(minx),
+        "x_max": float(maxx),
+        "y_min": float(miny),
+        "y_max": float(maxy),
+    }
+    logger.info(f"Bounding box: {bbox_dict}")
     margin_degrees = 1.0
     df_box = box(
         minx=minx - margin_degrees,
@@ -271,8 +283,16 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
 
     starttime = dt.datetime.now().strftime("%Y%m%d_%H%M")
+    logfile = f"logs/preparation_{starttime}.log"
+    logger.add(logfile)
+
+    logger.info(f"Starting logfile at {logfile}")
 
     args = parser.parse_args()
+
+    logger.info(
+        "Starting data preparation with settings:\n{}", pprint.pformat(vars(args))
+    )
 
     main(
         trajectory_file=args.datafile,

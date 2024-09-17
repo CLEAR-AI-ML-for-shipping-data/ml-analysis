@@ -2,6 +2,7 @@ import datetime as dt
 
 import torch
 from astromorph.astromorph.src.byol import ByolTrainer
+from loguru import logger
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 
@@ -10,7 +11,16 @@ from voyage_dataset import VoyageFilelistDataset
 
 # full_dataset = VoyageFilelistDataset("multilayer_minsize_8h_images.txt")
 # full_dataset = VoyageFilelistDataset("triple_layer_minsize_4h_images.txt")
-full_dataset = VoyageFilelistDataset("triple_layer_minsize_4h_images_full.txt")
+data_file = "triple_layer_minsize_4h_images_full.txt"
+
+start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
+logfile = "logs/train_model_{start_time}.log"
+logger.add(f"{logfile}")
+
+logger.info(f"Writing logs to {logfile}")
+logger.info(f"Using input data from {data_file}")
+
+full_dataset = VoyageFilelistDataset(data_file)
 
 rng = torch.Generator().manual_seed(42)  # seeded RNG for reproducibility
 train_dataset, test_dataset = torch.utils.data.random_split(
@@ -36,7 +46,6 @@ augmentation_function = torch.nn.Sequential(
 model = CoastalVoyageModel()
 trainer = ByolTrainer(network=model, augmentation_function=augmentation_function)
 
-start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
 
 trainer.train_model(
     train_data=train_data,

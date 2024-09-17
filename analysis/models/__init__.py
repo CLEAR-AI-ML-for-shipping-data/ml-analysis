@@ -1,1 +1,1 @@
-from coastal_voyage_model import CoastalVoyageModel
+from .coastal_voyage_model import CoastalVoyageModel

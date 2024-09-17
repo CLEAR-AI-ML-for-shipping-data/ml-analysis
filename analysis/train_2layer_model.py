@@ -8,7 +8,9 @@ from torchvision import transforms as T
 from models import CoastalVoyageModel
 from voyage_dataset import VoyageFilelistDataset
 
-full_dataset = VoyageFilelistDataset("multilayer_minsize_8h_images.txt")
+# full_dataset = VoyageFilelistDataset("multilayer_minsize_8h_images.txt")
+# full_dataset = VoyageFilelistDataset("triple_layer_minsize_4h_images.txt")
+full_dataset = VoyageFilelistDataset("triple_layer_minsize_4h_images_full.txt")
 
 rng = torch.Generator().manual_seed(42)  # seeded RNG for reproducibility
 train_dataset, test_dataset = torch.utils.data.random_split(
@@ -26,10 +28,8 @@ augmentation_function = torch.nn.Sequential(
     T.RandomRotation(degrees=(0, 360)),
     # T.RandomApply(T.GaussianBlur((3, 3), (1.0, 2.0)), p=0.2),
     T.Normalize(
-        mean=torch.tensor([0.485, 0.456]),
-        # 0.406]),
-        std=torch.tensor([0.229, 0.224]),
-        # , 0.225]),
+        mean=torch.tensor([0.485, 0.456, 0.406]),
+        std=torch.tensor([0.229, 0.224, 0.225]),
     ),
 )
 

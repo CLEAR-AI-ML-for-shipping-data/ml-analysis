@@ -2,7 +2,7 @@ import argparse
 import datetime as dt
 import os
 import pickle
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import geopandas as gpd
 import numpy as np
@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 def voyage_array_from_points(
     data: gpd.GeoDataFrame,
-    coastlines: Optional[gpd.GeoDataFrame] = None,
+    coastlines: List[gpd.GeoDataFrame] = [],
     resolution: int = 256,
     dtype: np.dtype = np.float32,
     filename: str = None,
@@ -62,9 +62,12 @@ def voyage_array_from_points(
         dtype=dtype,
     )
     # Add coastline geometries to the trajectory
-    if coastlines is not None:
+    if len(coastlines) > 0:
+        image = np.expand_dims(image, axis=0)
+
+    for coastline in coastlines:
         try:
-            coastline = coastlines.overlay(square_box, how="intersection")
+            coastline = coastline.overlay(square_box, how="intersection")
 
             coast_raster = rasterize(
                 coastline.geometry,
@@ -73,18 +76,21 @@ def voyage_array_from_points(
                 dtype=dtype,
             )
             image = np.concat(
-                [np.expand_dims(image, axis=0), np.expand_dims(coast_raster, axis=0)],
+                [image, np.expand_dims(coast_raster, axis=0)],
                 axis=0,
             )
         # If there is no overlap, GeoPandas raises a ValueError.
         # In that case, add a layer of zeros
         except ValueError:
             image = np.concat(
-                [np.expand_dims(image, axis=0), np.zeros((1, resolution, resolution))],
+                [image, np.zeros((1, resolution, resolution))],
                 axis=0,
             )
     # Export each individual array
-    assert image.shape == (2, resolution, resolution)
+    if len(coastlines) < 1:
+        assert image.shape == (resolution, resolution)
+    else:
+        assert image.shape == (len(coastlines) + 1, resolution, resolution)
     if filename is not None:
         with open(f"{filename}.npy", "wb") as file:
             pickle.dump(image, file=file)
@@ -95,7 +101,7 @@ def time_windowing(
     dataf: gpd.GeoDataFrame,
     window_size: str = "4h",
     step_size: str = "2h",
-    coastlines: Optional[gpd.GeoDataFrame] = None,
+    coastlines: List[gpd.GeoDataFrame] = [],
     prefix: str = None,
     export_dir: str = ".",
 ):
@@ -144,7 +150,7 @@ def time_windowing(
 
 def convert_dataframe(
     dataf: gpd.GeoDataFrame,
-    coastlines: Optional[gpd.GeoDataFrame] = None,
+    coastlines: Union[List[gpd.GeoDataFrame], gpd.GeoDataFrame] = [],
     window_size: str = "4h",
     step_size: str = "2h",
     timestamp: Optional[str] = None,
@@ -164,6 +170,9 @@ def convert_dataframe(
     Returns:
         a list of voyage snapshots
     """
+    if isinstance(coastlines, gpd.GeoDataFrame):
+        coastlines = [coastlines]
+
     images = []
 
     export_dir = f"./data/processed/processed_{timestamp}"
@@ -181,6 +190,13 @@ def convert_dataframe(
         )
 
     return images
+
+
+def load_external_geo_data(file: str, bounding_box: Optional[gpd.GeoDataFrame] = None):
+    gdf = gpd.read_file(file)
+    if bounding_box is not None:
+        gdf = gdf.overlay(bounding_box, how="intersection")
+    return gdf
 
 
 def main(
@@ -222,8 +238,11 @@ def main(
     )
     df_box = gpd.GeoDataFrame([{"geometry": df_box}], crs="EPSG:4326")
 
-    coastlines = gpd.read_file(coastline_file)
-    coastlines = coastlines.overlay(df_box, how="intersection")
+    # coastlines = gpd.read_file(coastline_file)
+    # coastlines = coastlines.overlay(df_box, how="intersection")
+    coastlines = []
+    for file in coastline_file:
+        coastlines.append(load_external_geo_data(file, bounding_box=df_box))
 
     convert_dataframe(df, coastlines=coastlines, timestamp=timestamp)
 
@@ -240,7 +259,13 @@ if __name__ == "__main__":
         "-c",
         "--coastlines",
         help="Specify a coastlines file",
-        default="data/external/GSHHS_f_L1.shp",
+        default="data/external/shorelines/GSHHS_f_L1.shp",
+    )
+    parser.add_argument(
+        "-e",
+        "--ecozones",
+        help="Specify a territorial waters file",
+        default="data/external/eco_zones/eez_territorial_fused.gpkg",
     )
     parser.add_argument("-w", "--window", help="Specify a time window", default="4h")
     parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
@@ -251,7 +276,7 @@ if __name__ == "__main__":
 
     main(
         trajectory_file=args.datafile,
-        coastline_file=args.coastlines,
+        coastline_file=[args.coastlines, args.ecozones],
         window=args.window,
         step=args.step,
         timestamp=starttime,

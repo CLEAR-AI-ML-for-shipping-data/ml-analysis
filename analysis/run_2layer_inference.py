@@ -90,19 +90,6 @@ def main(
     clusterer = cluster.KMeans(n_clusters=10)
     cluster_labels = clusterer.fit_predict(embeddings.cpu())
 
-    logger.info("Producing thumbnails...")
-    plot_images = [normalize_image(image.cpu()) for image in images]
-
-    # If thumbnails are too large, TensorBoard runs out of memory
-    thumbnail_size = 81
-    thumbnail_size = 39
-    thumbnail_size = 215
-
-    resized = [create_thumbnail(image, thumbnail_size) for image in plot_images]
-
-    # Concatenate thumbnails into a single tensor for labelling the embeddings
-    all_ims = torch.cat(resized)
-
     # Remove directory names, and remove the extension as well
     model_basename = os.path.basename(model_name).split(".")[0]
     writer = SummaryWriter(log_dir=f"runs/{model_basename}/")
@@ -139,6 +126,18 @@ def main(
         labels = cluster_labels
         headers = None
 
+    logger.info("Producing thumbnails...")
+    plot_images = [normalize_image(image.cpu()) for image in images]
+
+    # If thumbnails are too large, TensorBoard runs out of memory
+    thumbnail_size = 81
+    thumbnail_size = 39
+    thumbnail_size = 215
+
+    resized = [create_thumbnail(image, thumbnail_size) for image in plot_images]
+
+    # Concatenate thumbnails into a single tensor for labelling the embeddings
+    all_ims = torch.cat(resized)
     writer.add_embedding(
         embeddings, label_img=all_ims, metadata=labels, metadata_header=headers
     )
@@ -150,7 +149,7 @@ def main(
 
         if headers is None:
             headers = ["cluster_label"]
-            labels = list(cluster_labels)
+            labels = [[label] for label in cluster_labels]
 
         embedding_columns = [f"emb_dim_{i}" for i in range(embeddings.shape[1])]
         df_embeddings = pd.DataFrame(columns=embedding_columns, data=embeddings.cpu())
@@ -187,6 +186,8 @@ if __name__ == "__main__":
 
     # Use InferenceSettings to validate settings
     settings = InferenceSettings(**config_dict)
+
+    settings.export_to_csv = True
 
     logger.info("Reading data")
     dataset = VoyageFilelistDataset(settings.datafile, **(settings.data_settings))

@@ -36,6 +36,7 @@ class VoyageFilelistDataset(BaseDataset):
     """
     def __init__(self, filelist: str):
         super().__init__()
+        self.input_file: str = filelist
         if isinstance(filelist, list):
             self.filenames = filelist
         else:

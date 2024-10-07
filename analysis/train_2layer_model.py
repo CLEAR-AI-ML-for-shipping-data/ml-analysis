@@ -32,8 +32,6 @@ train_data = DataLoader(train_dataset, batch_size=1, shuffle=True, pin_memory=Tr
 test_data = DataLoader(test_dataset, batch_size=1, shuffle=True, pin_memory=True)
 
 augmentation_function = torch.nn.Sequential(
-    # T.RandomApply(T.ColorJitter(0.8, 0.8, 0.8, 0.2), p=0.3),
-    # T.RandomGrayscale(p=0.2),
     T.RandomHorizontalFlip(),
     T.RandomRotation(degrees=(0, 360)),
     # T.RandomApply(T.GaussianBlur((3, 3), (1.0, 2.0)), p=0.2),
@@ -46,7 +44,11 @@ augmentation_function = torch.nn.Sequential(
 normalization_function = MinMaxNorm()
 
 model = CoastalVoyageModel()
-trainer = ByolTrainer(network=model, augmentation_function=augmentation_function, normalization_function=normalization_function)
+trainer = ByolTrainer(
+    network=model,
+    augmentation_function=augmentation_function,
+    normalization_function=normalization_function,
+)
 
 
 trainer.train_model(

@@ -1,5 +1,6 @@
 import argparse
 import datetime as dt
+import pprint
 import tomllib
 
 import torch
@@ -17,10 +18,14 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
     start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
     logfile = f"logs/train_model_{start_time}.log"
+    logger.info(f"Writing logs to {logfile}")
     logger.add(f"{logfile}")
 
-    logger.info(f"Writing logs to {logfile}")
-    logger.info(f"Using input data from {dataset.input_file}")
+    logger.info(
+        f"Starting training with settings:\n{
+            pprint.pformat(train_settings.model_dump())
+        }",
+    )
 
     rng = torch.Generator().manual_seed(42)  # seeded RNG for reproducibility
     train_dataset, test_dataset = torch.utils.data.random_split(
@@ -60,14 +65,12 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="CLEAR training script"
-    )
+    parser = argparse.ArgumentParser(prog="CLEAR training script")
 
     parser.add_argument(
         "-c", "--configfile", help="Specify a configfile", required=True
     )
-    
+
     with open(parser.parse_args().configfile, "rb") as file:
         config_dict = tomllib.load(file)
     settings = TrainingSettings(**config_dict)

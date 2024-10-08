@@ -13,7 +13,7 @@ from settings import TrainingSettings
 from voyage_dataset import VoyageFilelistDataset
 
 
-def main(dataset: VoyageFilelistDataset):
+def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
     start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
     logfile = f"logs/train_model_{start_time}.log"
@@ -43,7 +43,7 @@ def main(dataset: VoyageFilelistDataset):
 
     normalization_function = MinMaxNorm()
 
-    model = CoastalVoyageModel()
+    model = CoastalVoyageModel(**train_settings.network_settings)
     trainer = ByolTrainer(
         network=model,
         augmentation_function=augmentation_function,
@@ -76,4 +76,4 @@ if __name__ == "__main__":
         torch.set_num_threads(settings.core_limit)
 
     dataset = VoyageFilelistDataset(settings.datafile)
-    main(dataset)
+    main(dataset, settings)

@@ -25,4 +25,5 @@ class FileSettings(BaseModel):
 
 class TrainingSettings(FileSettings):
     epochs: int = Field(default=10, gt=0)
+    network_settings: dict = Field(default={})
     core_limit: int = Field(default=0, ge=0)

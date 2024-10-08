@@ -29,8 +29,14 @@ class VoyageDataset(BaseDataset):
 
 
 class VoyageFilelistDataset(BaseDataset):
+    """Dataset for when images are stored in a list of files.
+
+    This way you can load distributed image data into a model or DataLoader.
+
+    """
     def __init__(self, filelist: str):
         super().__init__()
+        self.input_file: str = filelist
         if isinstance(filelist, list):
             self.filenames = filelist
         else:

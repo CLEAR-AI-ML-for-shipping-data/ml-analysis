@@ -27,3 +27,8 @@ class TrainingSettings(FileSettings):
     epochs: int = Field(default=10, gt=0)
     network_settings: dict = Field(default={})
     core_limit: int = Field(default=0, ge=0)
+
+
+class InferenceSettings(FileSettings):
+    trained_network_name: FileName
+    export_to_csv: bool = Field(default=False)

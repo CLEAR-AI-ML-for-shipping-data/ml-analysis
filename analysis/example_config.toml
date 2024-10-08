@@ -1,0 +1,4 @@
+datafile = "example_filelist.txt"
+
+[network_settings]
+in_channels = 1

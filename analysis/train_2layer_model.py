@@ -53,6 +53,7 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
         network=model,
         augmentation_function=augmentation_function,
         normalization_function=normalization_function,
+        representation_size=train_settings.network_settings.get("dim_5", 128)
     )
 
     trainer.train_model(

@@ -268,16 +268,10 @@ if __name__ == "__main__":
         "-d", "--datafile", help="Specify a trajectory file", required=True
     )
     parser.add_argument(
-        "-c",
-        "--coastlines",
-        help="Specify a coastlines file",
-        default="data/external/shorelines/GSHHS_f_L1.shp",
-    )
-    parser.add_argument(
-        "-e",
-        "--ecozones",
-        help="Specify a territorial waters file",
-        default="data/external/eco_zones/eez_territorial_fused.gpkg",
+        "-g", "--geometries",
+        help="Specify one or more geometry files for extra information",
+        nargs="*",
+        default=[],
     )
     parser.add_argument("-w", "--window", help="Specify a time window", default="4h")
     parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
@@ -296,7 +290,7 @@ if __name__ == "__main__":
 
     main(
         trajectory_file=args.datafile,
-        coastline_file=[args.coastlines, args.ecozones],
+        coastline_file=args.geometries,
         window=args.window,
         step=args.step,
         timestamp=starttime,

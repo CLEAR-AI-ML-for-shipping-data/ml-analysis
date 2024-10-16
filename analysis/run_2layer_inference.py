@@ -124,9 +124,14 @@ def main(
         ]
 
     else:
-        labels = cluster_labels
-        headers = None
+        labels = list(
+            zip(
+                cluster_labels,
+                dataset.filenames
+            )
+        )
 
+        headers = ["cluster", "filename"]
 
     # Make thumbnails to show in TensorBoard
     if make_thumbnails:

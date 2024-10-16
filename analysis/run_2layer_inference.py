@@ -51,6 +51,7 @@ def main(
     dataset: FilelistDataset,
     model_name: str,
     export_embeddings: bool = False,
+    make_thumbnails: bool = True
 ):
     """Run the inference.
 
@@ -123,24 +124,32 @@ def main(
         ]
 
     else:
-        labels = cluster_labels
-        headers = None
+        labels = list(
+            zip(
+                cluster_labels,
+                dataset.filenames
+            )
+        )
 
-    logger.info("Producing thumbnails...")
-    plot_images = [normalize_image(image.cpu()) for image in images]
+        headers = ["cluster", "filename"]
 
-    # If thumbnails are too large, TensorBoard runs out of memory
-    thumbnail_size = 81
-    thumbnail_size = 39
-    thumbnail_size = 215
+    # Make thumbnails to show in TensorBoard
+    if make_thumbnails:
+        logger.info("Producing thumbnails...")
+        plot_images = [normalize_image(image.cpu()) for image in images]
 
-    resized = [create_thumbnail(image, thumbnail_size) for image in plot_images]
+        # If thumbnails are too large, TensorBoard runs out of memory
+        thumbnail_size = 81
+        thumbnail_size = 39
+        thumbnail_size = 215
 
-    # Concatenate thumbnails into a single tensor for labelling the embeddings
-    all_ims = torch.cat(resized)
-    writer.add_embedding(
-        embeddings, label_img=all_ims, metadata=labels, metadata_header=headers
-    )
+        resized = [create_thumbnail(image, thumbnail_size) for image in plot_images]
+
+        # Concatenate thumbnails into a single tensor for labelling the embeddings
+        all_ims = torch.cat(resized)
+        writer.add_embedding(
+            embeddings, label_img=all_ims, metadata=labels, metadata_header=headers
+        )
 
     if export_embeddings:
         exportdir = "exported/"

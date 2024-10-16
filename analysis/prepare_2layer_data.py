@@ -63,10 +63,11 @@ def voyage_array_from_points(
         transform=transform,
         dtype=dtype,
     )
-    # Add coastline geometries to the trajectory
-    if len(coastlines) > 0:
-        image = np.expand_dims(image, axis=0)
 
+    # Make the image the first channel in an (optionally) multichannel image
+    image = np.expand_dims(image, axis=0)
+
+    # Add coastline geometries to the trajectory
     for coastline in coastlines:
         try:
             coastline = coastline.overlay(square_box, how="intersection")
@@ -88,11 +89,10 @@ def voyage_array_from_points(
                 [image, np.zeros((1, resolution, resolution))],
                 axis=0,
             )
+    # Check array dimensions before exporting
+    assert image.shape == (len(coastlines) + 1, resolution, resolution)
+
     # Export each individual array
-    if len(coastlines) < 1:
-        assert image.shape == (resolution, resolution)
-    else:
-        assert image.shape == (len(coastlines) + 1, resolution, resolution)
     if filename is not None:
         with open(f"{filename}.npy", "wb") as file:
             pickle.dump(image, file=file)
@@ -268,16 +268,10 @@ if __name__ == "__main__":
         "-d", "--datafile", help="Specify a trajectory file", required=True
     )
     parser.add_argument(
-        "-c",
-        "--coastlines",
-        help="Specify a coastlines file",
-        default="data/external/shorelines/GSHHS_f_L1.shp",
-    )
-    parser.add_argument(
-        "-e",
-        "--ecozones",
-        help="Specify a territorial waters file",
-        default="data/external/eco_zones/eez_territorial_fused.gpkg",
+        "-g", "--geometries",
+        help="Specify one or more geometry files for extra information",
+        nargs="*",
+        default=[],
     )
     parser.add_argument("-w", "--window", help="Specify a time window", default="4h")
     parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
@@ -296,7 +290,7 @@ if __name__ == "__main__":
 
     main(
         trajectory_file=args.datafile,
-        coastline_file=[args.coastlines, args.ecozones],
+        coastline_file=args.geometries,
         window=args.window,
         step=args.step,
         timestamp=starttime,

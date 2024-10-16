@@ -39,11 +39,11 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
     augmentation_function = torch.nn.Sequential(
         T.RandomHorizontalFlip(),
         T.RandomRotation(degrees=(0, 360)),
-        # T.RandomApply(T.GaussianBlur((3, 3), (1.0, 2.0)), p=0.2),
-        T.Normalize(
-            mean=torch.tensor([0.485, 0.456, 0.406]),
-            std=torch.tensor([0.229, 0.224, 0.225]),
-        ),
+        # T.RandomApply([T.GaussianBlur((3, 3), (1.0, 2.0))], p=0.2),
+        # T.Normalize(
+        #     mean=torch.tensor([0.485, 0.456, 0.406]),
+        #     std=torch.tensor([0.229, 0.224, 0.225]),
+        # ),
     )
 
     normalization_function = MinMaxNorm()

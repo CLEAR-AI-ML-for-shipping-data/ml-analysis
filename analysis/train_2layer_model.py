@@ -53,12 +53,13 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
         network=model,
         augmentation_function=augmentation_function,
         normalization_function=normalization_function,
+        representation_size=train_settings.network_settings.get("dim_5", 128)
     )
 
     trainer.train_model(
         train_data=train_data,
         test_data=test_data,
-        epochs=2,
+        epochs=train_settings.epochs,
         save_file=f"trained_model_{start_time}.pt",
         log_dir=f"runs/multilayer_{start_time}",
     )

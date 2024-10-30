@@ -136,7 +136,7 @@ def main(
     # Make thumbnails to show in TensorBoard
     if make_thumbnails:
         logger.info("Producing thumbnails...")
-        plot_images = [normalize_image(image.cpu()) for image in images]
+        plot_images = [normalize_image(image.cpu()) for image in dataset.get_all_items()]
 
         # If thumbnails are too large, TensorBoard runs out of memory
         thumbnail_size = 81
@@ -201,4 +201,4 @@ if __name__ == "__main__":
     logger.info("Reading data")
     dataset = VoyageFilelistDataset(settings.datafile, **(settings.data_settings))
 
-    main(dataset, settings.trained_network_name, settings.export_to_csv)
+    main(dataset, settings.trained_network_name, settings.export_to_csv, make_thumbnails=False)

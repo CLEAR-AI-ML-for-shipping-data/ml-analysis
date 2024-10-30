@@ -201,4 +201,4 @@ if __name__ == "__main__":
     logger.info("Reading data")
     dataset = VoyageFilelistDataset(settings.datafile, **(settings.data_settings))
 
-    main(dataset, settings.trained_network_name, settings.export_to_csv)
+    main(dataset, settings.trained_network_name, settings.export_to_csv, make_thumbnails=False)

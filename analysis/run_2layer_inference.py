@@ -136,7 +136,7 @@ def main(
     # Make thumbnails to show in TensorBoard
     if make_thumbnails:
         logger.info("Producing thumbnails...")
-        plot_images = [normalize_image(image.cpu()) for image in images]
+        plot_images = [normalize_image(image.cpu()) for image in dataset.get_all_items()]
 
         # If thumbnails are too large, TensorBoard runs out of memory
         thumbnail_size = 81

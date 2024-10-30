@@ -59,7 +59,7 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
     trainer.train_model(
         train_data=train_data,
         test_data=test_data,
-        epochs=2,
+        epochs=train_settings.epochs,
         save_file=f"trained_model_{start_time}.pt",
         log_dir=f"runs/multilayer_{start_time}",
     )

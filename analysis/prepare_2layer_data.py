@@ -6,6 +6,7 @@ import pprint
 from typing import List, Optional, Union
 
 import geopandas as gpd
+import h5torch
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -162,6 +163,7 @@ def convert_dataframe(
     window_size: str = "4h",
     step_size: str = "2h",
     timestamp: Optional[str] = None,
+    hdf5_file: Optional[str] = None,
     image_main_export_dir: Optional[str] = None,
 ):
     """Convert a dataframe full of voyages to rasterized voyage snapshots.
@@ -203,6 +205,11 @@ def convert_dataframe(
             step_size=step_size,
             export_dir=export_dir,
         )
+    if hdf5_file is not None:
+        hdf5_file = f"{hdf5_file}.h5t"
+        logger.info(f"Exporting data to {hdf5_file}")
+        file = h5torch.File(hdf5_file, "w")
+        file.register(data=np.array(images), axis="central")
 
     return images
 
@@ -220,6 +227,7 @@ def main(
     window: str = "4h",
     step: str = "2h",
     timestamp: Optional[str] = None,
+    hdf5_file: Optional[str] = None,
     image_main_export_dir: Optional[str] = None,
 ):
     """Run the data preparation pipeline.
@@ -267,7 +275,7 @@ def main(
     for file in coastline_file:
         coastlines.append(load_external_geo_data(file, bounding_box=df_box))
 
-    convert_dataframe(df, coastlines=coastlines, timestamp=timestamp)
+    convert_dataframe(df, coastlines=coastlines, timestamp=timestamp, hdf5_file=hdf5_file, image_main_export_dir=image_main_export_dir)
 
 
 if __name__ == "__main__":
@@ -305,4 +313,5 @@ if __name__ == "__main__":
         window=args.window,
         step=args.step,
         timestamp=starttime,
+        hdf5_file="export_data"
     )

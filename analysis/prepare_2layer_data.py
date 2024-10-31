@@ -136,12 +136,18 @@ def time_windowing(
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
 
+        if export_dir is None:
+            filename = None
+        else:
+            filename=f"{export_dir}/{prefix}_{start_string}_{end_string}"
+
+
         # We cannot say anything about a trajectory that is just 2 points
         if data.shape[0] > 2:
             image = voyage_array_from_points(
                 data,
                 coastlines=coastlines,
-                filename=f"{export_dir}/{prefix}_{start_string}_{end_string}",
+                filename=filename,
             )
 
         if image is not None:
@@ -156,6 +162,7 @@ def convert_dataframe(
     window_size: str = "4h",
     step_size: str = "2h",
     timestamp: Optional[str] = None,
+    image_main_export_dir: Optional[str] = None,
 ):
     """Convert a dataframe full of voyages to rasterized voyage snapshots.
 
@@ -176,12 +183,15 @@ def convert_dataframe(
         coastlines = [coastlines]
 
     images = []
+    
+    if image_main_export_dir is not None:
+        export_dir = f"{image_main_export_dir}/processed_{timestamp}"
 
-    export_dir = f"./data/processed/processed_{timestamp}"
-
-    logger.info(f"Creating folder {export_dir}")
-    os.mkdir(export_dir)
-    logger.info(f"Data will be exported to folder {export_dir}")
+        logger.info(f"Creating folder {export_dir}")
+        os.mkdir(export_dir)
+        logger.info(f"Data will be exported to folder {export_dir}")
+    else:
+        export_dir = None
 
     # Iterate over combination of (ship identifier, voyage number)
     for xlabel in tqdm(dataf.droplevel(-1).index.unique()):
@@ -210,6 +220,7 @@ def main(
     window: str = "4h",
     step: str = "2h",
     timestamp: Optional[str] = None,
+    image_main_export_dir: Optional[str] = None,
 ):
     """Run the data preparation pipeline.
 

@@ -6,7 +6,7 @@ import pprint
 from typing import List, Optional, Union
 
 import geopandas as gpd
-import h5torch
+import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -107,6 +107,7 @@ def time_windowing(
     coastlines: List[gpd.GeoDataFrame] = [],
     prefix: str = None,
     export_dir: str = ".",
+    zipfile: str = None,
 ):
     """Create time-windowed snapshots of the voyage, and rasterize the snapshots.
 
@@ -156,6 +157,9 @@ def time_windowing(
         if image is not None:
             images.append(image)
 
+            if zipfile is not None:
+                with h5py.File(zipfile, "a") as file:
+                    _ = file.create_dataset(base_filename, data=image)
     return images
 
 
@@ -197,6 +201,10 @@ def convert_dataframe(
     else:
         export_dir = None
 
+    if hdf5_file is not None:
+        hdf5_file = f"{hdf5_file}"
+        logger.info(f"Exporting data to {hdf5_file}")
+
     # Iterate over combination of (ship identifier, voyage number)
     for xlabel in tqdm(dataf.droplevel(-1).index.unique()):
         images += time_windowing(
@@ -207,11 +215,6 @@ def convert_dataframe(
             step_size=step_size,
             export_dir=export_dir,
         )
-    if hdf5_file is not None:
-        hdf5_file = f"{hdf5_file}.h5t"
-        logger.info(f"Exporting data to {hdf5_file}")
-        file = h5torch.File(hdf5_file, "w")
-        file.register(data=np.array(images), axis="central")
 
     return images
 

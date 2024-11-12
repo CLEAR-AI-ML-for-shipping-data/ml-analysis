@@ -25,6 +25,8 @@ class VoyageHDF5Dataset(BaseDataset):
 
     def __getitem__(self, index: int):
         with h5py.File(self.filename) as file:
+            # Use the [()] subscription to retrieve an individual data item
+            # See h5py documentation for more information
             image = file[self.filenames[index]][()]
 
         image = torch.from_numpy(image).float()
@@ -55,7 +57,7 @@ class VoyageHDF5Dataset(BaseDataset):
     def get_all_items(self):
         with h5py.File(self.filename) as file:
             all_items = [
-                torch.from_numpy(file[a_name]).float()[None, :, :, :]
+                torch.from_numpy(file[a_name][()]).float()[None, :, :, :]
                 for a_name in self.filenames
             ]
         return all_items

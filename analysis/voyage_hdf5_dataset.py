@@ -18,14 +18,14 @@ class VoyageHDF5Dataset(BaseDataset):
         # to a certain index. Otherwise this needs to be done with list
         # comprehension in the __getitem__ method.
         with h5py.File(self.filename) as file:
-            self.array_names = [key for key in file.keys()]
+            self.filenames = [key for key in file.keys()]
 
     def __len__(self):
-        return len(self.array_names)
+        return len(self.filenames)
 
     def __getitem__(self, index: int):
         with h5py.File(self.filename) as file:
-            image = file[self.array_names[index]][()]
+            image = file[self.filenames[index]][()]
 
         image = torch.from_numpy(image).float()
         image = image[None, :, :, :]
@@ -56,6 +56,6 @@ class VoyageHDF5Dataset(BaseDataset):
         with h5py.File(self.filename) as file:
             all_items = [
                 torch.from_numpy(file[a_name]).float()[None, :, :, :]
-                for a_name in self.array_names
+                for a_name in self.filenames
             ]
         return all_items

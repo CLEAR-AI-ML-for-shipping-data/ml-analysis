@@ -214,6 +214,7 @@ def convert_dataframe(
             window_size=window_size,
             step_size=step_size,
             export_dir=export_dir,
+            zipfile=hdf5_file,
         )
 
     return images

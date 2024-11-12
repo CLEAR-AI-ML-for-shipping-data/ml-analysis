@@ -320,4 +320,5 @@ if __name__ == "__main__":
         step=args.step,
         timestamp=starttime,
         hdf5_file=args.hdf5,
+        # image_main_export_dir="./data/processed"
     )

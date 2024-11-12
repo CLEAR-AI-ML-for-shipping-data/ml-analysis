@@ -145,7 +145,6 @@ def time_windowing(
         else:
             filename = f"{export_dir}/{base_filename}"
 
-
         # We cannot say anything about a trajectory that is just 2 points
         if data.shape[0] > 2:
             image = voyage_array_from_points(
@@ -191,7 +190,7 @@ def convert_dataframe(
         coastlines = [coastlines]
 
     images = []
-    
+
     if image_main_export_dir is not None:
         export_dir = f"{image_main_export_dir}/processed_{timestamp}"
 
@@ -281,7 +280,13 @@ def main(
     for file in coastline_file:
         coastlines.append(load_external_geo_data(file, bounding_box=df_box))
 
-    convert_dataframe(df, coastlines=coastlines, timestamp=timestamp, hdf5_file=hdf5_file, image_main_export_dir=image_main_export_dir)
+    convert_dataframe(
+        df,
+        coastlines=coastlines,
+        timestamp=timestamp,
+        hdf5_file=hdf5_file,
+        image_main_export_dir=image_main_export_dir,
+    )
 
 
 if __name__ == "__main__":
@@ -293,7 +298,8 @@ if __name__ == "__main__":
         "-d", "--datafile", help="Specify a trajectory file", required=True
     )
     parser.add_argument(
-        "-g", "--geometries",
+        "-g",
+        "--geometries",
         help="Specify one or more geometry files for extra information",
         nargs="*",
         default=[],

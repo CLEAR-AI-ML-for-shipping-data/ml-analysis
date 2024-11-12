@@ -12,6 +12,7 @@ from torchvision import transforms as T
 from models import CoastalVoyageModel
 from settings import TrainingSettings
 from voyage_dataset import VoyageFilelistDataset
+from voyage_hdf5_dataset import VoyageHDF5Dataset
 
 
 def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
@@ -79,5 +80,6 @@ if __name__ == "__main__":
     if settings.core_limit:
         torch.set_num_threads(settings.core_limit)
 
-    dataset = VoyageFilelistDataset(settings.datafile)
+    # dataset = VoyageFilelistDataset(settings.datafile)
+    dataset = VoyageHDF5Dataset(settings.datafile)
     main(dataset, settings)

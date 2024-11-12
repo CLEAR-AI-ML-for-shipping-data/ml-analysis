@@ -137,10 +137,12 @@ def time_windowing(
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
 
+        base_filename = f"{prefix}_{start_string}_{end_string}"
+
         if export_dir is None:
             filename = None
         else:
-            filename=f"{export_dir}/{prefix}_{start_string}_{end_string}"
+            filename = f"{export_dir}/{base_filename}"
 
 
         # We cannot say anything about a trajectory that is just 2 points

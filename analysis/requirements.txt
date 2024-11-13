@@ -1,5 +1,6 @@
 astropy>=6.1.3
 geopandas>=1.0.1
+h5py>=3.12.1
 loguru>=0.7.2
 numpy>=2.1.1
 pandas>=2.2.2

@@ -23,9 +23,8 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
     logger.add(f"{logfile}")
 
     logger.info(
-        f"Starting training with settings:\n{
-            pprint.pformat(train_settings.model_dump())
-        }",
+        "Starting training with settings:"
+        + f"\n{pprint.pformat(train_settings.model_dump())}",
     )
 
     rng = torch.Generator().manual_seed(42)  # seeded RNG for reproducibility

@@ -7,6 +7,7 @@ import torch
 from astromorph.astromorph.src.byol import ByolTrainer, MinMaxNorm
 from loguru import logger
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import transforms as T
 
 from models import CoastalVoyageModel
@@ -48,12 +49,17 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
     normalization_function = MinMaxNorm()
 
+    lr_scheduler = ExponentialLR if train_settings.exponential_lr is True else None
+
     model = CoastalVoyageModel(**train_settings.network_settings)
     trainer = ByolTrainer(
         network=model,
         augmentation_function=augmentation_function,
         normalization_function=normalization_function,
-        representation_size=train_settings.network_settings.get("dim_5", 128)
+        representation_size=train_settings.network_settings.get("dim_5", 128),
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_options={"gamma": train_settings.gamma},
+        learning_rate=train_settings.learning_rate,
     )
 
     trainer.train_model(

@@ -19,7 +19,12 @@ from voyage_hdf5_dataset import VoyageHDF5Dataset
 def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
     start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
-    logfile = f"logs/train_model_{start_time}.log"
+    if train_settings.save_name is None:
+        train_settings.save_name = start_time
+    else:
+        train_settings.save_name += f"_{start_time}"
+
+    logfile = f"logs/train_model_{train_settings.save_name}.log"
     logger.info(f"Writing logs to {logfile}")
     logger.add(f"{logfile}")
 
@@ -66,8 +71,8 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
         train_data=train_data,
         test_data=test_data,
         epochs=train_settings.epochs,
-        save_file=f"trained_model_{start_time}.pt",
-        log_dir=f"runs/multilayer_{start_time}",
+        save_file=f"trained_model_{train_settings.save_name}.pt",
+        log_dir=f"runs/multilayer_{train_settings.save_name}",
         batch_size=train_settings.batch_size,
     )
 
@@ -84,8 +89,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-b", "--batch-size", help="Batch size", type=int
     )
-
-
+    parser.add_argument(
+        "-n", "--save-name", help="Model reference name, used in logs and save files",
+        type=str
+    )
 
     args = parser.parse_args()
 

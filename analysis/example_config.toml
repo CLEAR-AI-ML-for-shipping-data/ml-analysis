@@ -1,4 +1,7 @@
 datafile = "example_filelist.txt"
+learning_rate= 6.0e-6
+exponential_lr = true
+gamma = 0.99
 
 [network_settings]
 in_channels = 1

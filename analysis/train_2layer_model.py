@@ -79,6 +79,9 @@ if __name__ == "__main__":
         "-c", "--configfile", help="Specify a configfile", required=True
     )
     parser.add_argument(
+        "-l", "--learning-rate", help="Learning rate", type=float
+    )
+    parser.add_argument(
         "-b", "--batch-size", help="Batch size", type=int
     )
 

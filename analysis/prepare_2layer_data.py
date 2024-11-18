@@ -6,6 +6,7 @@ import pprint
 from typing import List, Optional, Union
 
 import geopandas as gpd
+import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -106,6 +107,7 @@ def time_windowing(
     coastlines: List[gpd.GeoDataFrame] = [],
     prefix: str = None,
     export_dir: str = ".",
+    zipfile: str = None,
 ):
     """Create time-windowed snapshots of the voyage, and rasterize the snapshots.
 
@@ -136,17 +138,27 @@ def time_windowing(
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
 
+        base_filename = f"{prefix}_{start_string}_{end_string}"
+
+        if export_dir is None:
+            filename = None
+        else:
+            filename = f"{export_dir}/{base_filename}"
+
         # We cannot say anything about a trajectory that is just 2 points
         if data.shape[0] > 2:
             image = voyage_array_from_points(
                 data,
                 coastlines=coastlines,
-                filename=f"{export_dir}/{prefix}_{start_string}_{end_string}",
+                filename=filename,
             )
 
         if image is not None:
             images.append(image)
 
+            if zipfile is not None:
+                with h5py.File(zipfile, "a") as file:
+                    _ = file.create_dataset(base_filename, data=image)
     return images
 
 
@@ -156,6 +168,8 @@ def convert_dataframe(
     window_size: str = "4h",
     step_size: str = "2h",
     timestamp: Optional[str] = None,
+    hdf5_file: Optional[str] = None,
+    image_main_export_dir: Optional[str] = None,
 ):
     """Convert a dataframe full of voyages to rasterized voyage snapshots.
 
@@ -177,11 +191,18 @@ def convert_dataframe(
 
     images = []
 
-    export_dir = f"./data/processed/processed_{timestamp}"
+    if image_main_export_dir is not None:
+        export_dir = f"{image_main_export_dir}/processed_{timestamp}"
 
-    logger.info(f"Creating folder {export_dir}")
-    os.mkdir(export_dir)
-    logger.info(f"Data will be exported to folder {export_dir}")
+        logger.info(f"Creating folder {export_dir}")
+        os.mkdir(export_dir)
+        logger.info(f"Data will be exported to folder {export_dir}")
+    else:
+        export_dir = None
+
+    if hdf5_file is not None:
+        hdf5_file = f"{hdf5_file}"
+        logger.info(f"Exporting data to {hdf5_file}")
 
     # Iterate over combination of (ship identifier, voyage number)
     for xlabel in tqdm(dataf.droplevel(-1).index.unique()):
@@ -192,6 +213,7 @@ def convert_dataframe(
             window_size=window_size,
             step_size=step_size,
             export_dir=export_dir,
+            zipfile=hdf5_file,
         )
 
     return images
@@ -210,6 +232,8 @@ def main(
     window: str = "4h",
     step: str = "2h",
     timestamp: Optional[str] = None,
+    hdf5_file: Optional[str] = None,
+    image_main_export_dir: Optional[str] = None,
 ):
     """Run the data preparation pipeline.
 
@@ -256,7 +280,13 @@ def main(
     for file in coastline_file:
         coastlines.append(load_external_geo_data(file, bounding_box=df_box))
 
-    convert_dataframe(df, coastlines=coastlines, timestamp=timestamp)
+    convert_dataframe(
+        df,
+        coastlines=coastlines,
+        timestamp=timestamp,
+        hdf5_file=hdf5_file,
+        image_main_export_dir=image_main_export_dir,
+    )
 
 
 if __name__ == "__main__":
@@ -268,13 +298,15 @@ if __name__ == "__main__":
         "-d", "--datafile", help="Specify a trajectory file", required=True
     )
     parser.add_argument(
-        "-g", "--geometries",
+        "-g",
+        "--geometries",
         help="Specify one or more geometry files for extra information",
         nargs="*",
         default=[],
     )
     parser.add_argument("-w", "--window", help="Specify a time window", default="4h")
     parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
+    parser.add_argument("-h", "--hdf5", help="HDF5 archive to export to", default=None)
 
     starttime = dt.datetime.now().strftime("%Y%m%d_%H%M")
     logfile = f"logs/preparation_{starttime}.log"
@@ -294,4 +326,6 @@ if __name__ == "__main__":
         window=args.window,
         step=args.step,
         timestamp=starttime,
+        hdf5_file=args.hdf5,
+        # image_main_export_dir="./data/processed"
     )

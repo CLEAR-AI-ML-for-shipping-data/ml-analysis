@@ -21,6 +21,7 @@ from tqdm import tqdm
 
 from models import CoastalVoyageModel
 from voyage_dataset import VoyageDataset, VoyageFilelistDataset
+from voyage_hdf5_dataset import VoyageHDF5Dataset
 
 
 def normalize_image(image: torch.Tensor):
@@ -199,6 +200,6 @@ if __name__ == "__main__":
     settings.export_to_csv = True
 
     logger.info("Reading data")
-    dataset = VoyageFilelistDataset(settings.datafile, **(settings.data_settings))
+    dataset = VoyageHDF5Dataset(settings.datafile, **(settings.data_settings))
 
     main(dataset, settings.trained_network_name, settings.export_to_csv, make_thumbnails=False)

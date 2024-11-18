@@ -79,8 +79,19 @@ if __name__ == "__main__":
         "-c", "--configfile", help="Specify a configfile", required=True
     )
 
-    with open(parser.parse_args().configfile, "rb") as file:
+
+    args = parser.parse_args()
+
+    # Overriding settings are used to overwrite settings from the configfile
+    overriding_settings = vars(args)
+    configfile = overriding_settings.pop("configfile")
+    with open(configfile, "rb") as file:
         config_dict = tomllib.load(file)
+    # Overwrite the config file settings with command line settings
+    for key, value in overriding_settings.items():
+        if value is not None:
+            config_dict.update({key: value})
+
     settings = TrainingSettings(**config_dict)
 
     if settings.core_limit:

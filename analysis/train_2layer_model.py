@@ -78,6 +78,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c", "--configfile", help="Specify a configfile", required=True
     )
+    parser.add_argument(
+        "-b", "--batch-size", help="Batch size", type=int
+    )
+
 
 
     args = parser.parse_args()

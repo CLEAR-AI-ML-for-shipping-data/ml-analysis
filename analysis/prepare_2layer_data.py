@@ -74,7 +74,7 @@ def voyage_array_from_points(
             coastline = coastline.overlay(square_box, how="intersection")
 
             coast_raster = rasterize(
-                coastline.geometry,
+                coastline.geometry.boundary,
                 out_shape=(resolution, resolution),
                 transform=transform,
                 dtype=dtype,

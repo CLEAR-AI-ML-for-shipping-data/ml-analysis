@@ -7,6 +7,7 @@ import torch
 from astromorph.astromorph.src.byol import ByolTrainer, MinMaxNorm
 from loguru import logger
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import transforms as T
 
 from models import CoastalVoyageModel
@@ -18,7 +19,12 @@ from voyage_hdf5_dataset import VoyageHDF5Dataset
 def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
     start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
-    logfile = f"logs/train_model_{start_time}.log"
+    if train_settings.save_name is None:
+        train_settings.save_name = start_time
+    else:
+        train_settings.save_name += f"_{start_time}"
+
+    logfile = f"logs/train_model_{train_settings.save_name}.log"
     logger.info(f"Writing logs to {logfile}")
     logger.add(f"{logfile}")
 
@@ -48,20 +54,26 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
 
     normalization_function = MinMaxNorm()
 
+    lr_scheduler = ExponentialLR if train_settings.exponential_lr is True else None
+
     model = CoastalVoyageModel(**train_settings.network_settings)
     trainer = ByolTrainer(
         network=model,
         augmentation_function=augmentation_function,
         normalization_function=normalization_function,
-        representation_size=train_settings.network_settings.get("dim_5", 128)
+        representation_size=train_settings.network_settings.get("dim_5", 128),
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_options={"gamma": train_settings.gamma},
+        learning_rate=train_settings.learning_rate,
     )
 
     trainer.train_model(
         train_data=train_data,
         test_data=test_data,
         epochs=train_settings.epochs,
-        save_file=f"trained_model_{start_time}.pt",
-        log_dir=f"runs/multilayer_{start_time}",
+        save_file=f"trained_model_{train_settings.save_name}.pt",
+        log_dir=f"runs/multilayer_{train_settings.save_name}",
+        batch_size=train_settings.batch_size,
     )
 
 
@@ -71,9 +83,29 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c", "--configfile", help="Specify a configfile", required=True
     )
+    parser.add_argument(
+        "-l", "--learning-rate", help="Learning rate", type=float
+    )
+    parser.add_argument(
+        "-b", "--batch-size", help="Batch size", type=int
+    )
+    parser.add_argument(
+        "-n", "--save-name", help="Model reference name, used in logs and save files",
+        type=str
+    )
 
-    with open(parser.parse_args().configfile, "rb") as file:
+    args = parser.parse_args()
+
+    # Overriding settings are used to overwrite settings from the configfile
+    overriding_settings = vars(args)
+    configfile = overriding_settings.pop("configfile")
+    with open(configfile, "rb") as file:
         config_dict = tomllib.load(file)
+    # Overwrite the config file settings with command line settings
+    for key, value in overriding_settings.items():
+        if value is not None:
+            config_dict.update({key: value})
+
     settings = TrainingSettings(**config_dict)
 
     if settings.core_limit:

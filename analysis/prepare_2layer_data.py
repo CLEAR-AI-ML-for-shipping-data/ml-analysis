@@ -74,7 +74,7 @@ def voyage_array_from_points(
             coastline = coastline.overlay(square_box, how="intersection")
 
             coast_raster = rasterize(
-                coastline.geometry,
+                coastline.geometry.boundary,
                 out_shape=(resolution, resolution),
                 transform=transform,
                 dtype=dtype,
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-w", "--window", help="Specify a time window", default="4h")
     parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
-    parser.add_argument("-h", "--hdf5", help="HDF5 archive to export to", default=None)
+    parser.add_argument("-x", "--hdf5", help="HDF5 archive to export to", default=None)
 
     starttime = dt.datetime.now().strftime("%Y%m%d_%H%M")
     logfile = f"logs/preparation_{starttime}.log"

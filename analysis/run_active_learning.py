@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from skactiveml.classifier import SklearnClassifier
+from skactiveml.classifier import SklearnClassifier, ParzenWindowClassifier, MixtureModelClassifier
 from skactiveml.pool import UncertaintySampling
 from skactiveml.utils import MISSING_LABEL, labeled_indices, unlabeled_indices
 from skactiveml.visualization import plot_decision_boundary, plot_utilities
@@ -37,7 +37,7 @@ def main(embeddings_file: str, arrays_file: str):
     pca_vectors = pca_decomposer.fit_transform(df.loc[:, embeddings_columns].values)
 
     xvalues = df.loc[:, embeddings_columns]
-    # xvalues = pca_vectors
+    xvalues = pca_vectors[:, :2]
     centroid = np.expand_dims(xvalues.mean(axis=0), axis=0)
 
     distances = xvalues - centroid
@@ -54,20 +54,30 @@ def main(embeddings_file: str, arrays_file: str):
     clf = SklearnClassifier(
         SVC(
             probability=True,
-            kernel="rbf",
-            C=30.0,
+            kernel="poly",
+            # C=30.0,
             # gamma=0.1,
         ),
         classes=[0, 1],
     )
+    print("Starting classifier...")
+    # clf = ParzenWindowClassifier(classes=[0,1])
+    # clf = MixtureModelClassifier()
 
     n_cycles = 15
-    qs = UncertaintySampling(method="entropy", random_state=42)
-
+    # n_cycles = 5
+    # qs = UncertaintySampling(method="entropy", random_state=42)
+    qs = UncertaintySampling(method="least_confident", random_state=42)
+    print("First fit of classifier")
     clf.fit(xvalues, y)
+    print("Finished fit")
 
     for cycle in range(n_cycles):
-        query_idx = qs.query(X=xvalues, y=y, clf=clf, batch_size=1)
+        # print("querying")
+        query_idx = qs.query(X=xvalues, y=y, clf=clf, 
+                             # batch_size=1
+                             )
+        # print("finished query")
         query_trajectory = df.loc[query_idx[0], "filename"]
 
         fig = plot_trajectory(query_trajectory, arrays_file)
@@ -99,9 +109,18 @@ def main(embeddings_file: str, arrays_file: str):
     outlier_mask = prediction == 1
     highlight_points = pca_vectors[outlier_mask]
     dehighlight_points = pca_vectors[~outlier_mask]
+
+    # xx, yy = np.meshgrid(np.linspace(-6, 3, 200), np.linspace(-.6, .5, 200))
+    # Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    # Z = Z.reshape(xx.shape)
+
+
+
     ax = plt.subplot()
-    ax.scatter(dehighlight_points[:, 0], dehighlight_points[:, 1], c="b", s=2)
-    ax.scatter(highlight_points[:, 0], highlight_points[:, 1], c="r")
+    # ax.pcolormesh(xx, yy, -Z, cmap=plt.cm.RdBu)
+    plot_decision_boundary(clf, [[-6, -0.6], [2.5, 0.5]], ax)
+    ax.scatter(dehighlight_points[:, 0], dehighlight_points[:, 1], c="tab:blue", s=2)
+    ax.scatter(highlight_points[:, 0], highlight_points[:, 1], c="tab:orange")
     plt.show()
 
 

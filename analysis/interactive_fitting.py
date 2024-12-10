@@ -1,4 +1,5 @@
 import argparse
+import pickle
 from io import StringIO
 from time import time
 from typing import Dict
@@ -26,7 +27,7 @@ embeddings_file = args.embeddings
 arrays_file = args.image_archive
 
 filecolumn = "filename"
-ENCODING = "utf-16"
+ENCODING = "utf-16-le"
 
 
 def _no_matchin_data_message():
@@ -86,6 +87,20 @@ app.layout = html.Div(
                     style={
                         "height": "40%",
                     },
+                ),
+                html.Div(
+                    [
+                        dcc.RadioItems(
+                            id="label-selector",
+                            options=[
+                                {"label": "None", "value": -1},
+                                {"label": "Regular", "value": 0},
+                                {"label": "Outlier", "value": 1},
+                            ],
+                            inline=True,
+                        )
+                    ],
+                    id="label-prediction-container",
                 ),
                 dcc.Graph(
                     id="show-related-images",
@@ -267,13 +282,42 @@ def set_initial_xy_values(dataf):
         + embeddings_columns,
     ]
 
-    y_labeled = np.full(x_values.shape[0], fill_value=MISSING_LABEL)
-    y_labeled_bytestring = y_labeled.tobytes().decode(encoding=ENCODING)
+    y_labeled = df.loc[:, [filecolumn]].copy()
+    y_labeled["label"] = -1
+
+    # y_labeled = np.full(x_values.shape[0], fill_value=-1)
+    # print(y_labeled[0:5])
+    # y_labeled_bytestring = y_labeled.tobytes().decode(encoding=ENCODING)
 
     y_prediction = df.loc[:, filecolumn].copy()
     y_prediction["class"] = 0
 
-    return x_values.to_json(), y_labeled_bytestring, y_prediction.to_json()
+    return x_values.to_json(), y_labeled.to_json(), y_prediction.to_json()
+
+
+@callback(
+    Output("label-selector", "value"),
+    Output("label-selector", "style"),
+    Input("trajectories-scatter", "clickData"),
+    Input("y-labeled", "data"),
+)
+def display_label_container(click_data, labels):
+    if click_data is None:
+        return -1, {"visibility": "hidden"}
+
+    trajectory_id = f"file_{click_data["points"][0]["customdata"][0]}"
+
+    labels = pd.read_json(StringIO(labels))
+
+    label = labels[labels[filecolumn] == trajectory_id]["label"].iloc[0]
+    return label, {"visibility": "visible"}
+
+
+@callback(Input("y-labeled", "data"))
+def print_labels(labels):
+    ldf = pd.read_json(StringIO(labels))
+    # ldf = np.frombuffer(labels.encode(encoding=ENCODING))
+    # print(ldf[0:10])
 
 
 if __name__ == "__main__":

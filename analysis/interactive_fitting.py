@@ -9,7 +9,11 @@ import pandas as pd
 import plotly.express as px
 from dash import Dash, Input, Output, callback, callback_context, dcc, html, no_update
 from plotly.subplots import make_subplots
+from skactiveml.classifier import SklearnClassifier
+from skactiveml.pool import UncertaintySampling
+from skactiveml.utils import MISSING_LABEL, labeled_indices, unlabeled_indices
 from sklearn.decomposition import PCA
+from sklearn.svm import SVC
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--embeddings", help="Embeddings file", required=True)
@@ -22,6 +26,7 @@ embeddings_file = args.embeddings
 arrays_file = args.image_archive
 
 filecolumn = "filename"
+ENCODING = "utf-16"
 
 
 def _no_matchin_data_message():
@@ -97,6 +102,9 @@ app.layout = html.Div(
                 dcc.Store(id="stored-data", data={"last-clicked-time": time()}),
                 dcc.Store(id="raw-pca-data"),
                 dcc.Store(id="fitted-data"),
+                dcc.Store(id="x-values"),
+                dcc.Store(id="y-labeled"),
+                dcc.Store(id="y-predicted"),
             ]
         ),
     ]
@@ -240,9 +248,32 @@ def update_raw_pca_data(n_clicks):
     return plot_df.to_json(), df.to_json()
 
 
-# @callback(Output("fitted-data", "data"),
-# Input()
-#           )
+@callback(
+    Output("x-values", "data"),
+    Output("y-labeled", "data"),
+    Output("y-predicted", "data"),
+    Input("fitted-data", "data"),
+)
+def set_initial_xy_values(dataf):
+    df = pd.read_json(StringIO(dataf))
+
+    embeddings_columns = [col for col in df.columns if "emb_dim" in col]
+
+    x_values = df.loc[
+        :,
+        [
+            filecolumn,
+        ]
+        + embeddings_columns,
+    ]
+
+    y_labeled = np.full(x_values.shape[0], fill_value=MISSING_LABEL)
+    y_labeled_bytestring = y_labeled.tobytes().decode(encoding=ENCODING)
+
+    y_prediction = df.loc[:, filecolumn].copy()
+    y_prediction["class"] = 0
+
+    return x_values.to_json(), y_labeled_bytestring, y_prediction.to_json()
 
 
 if __name__ == "__main__":

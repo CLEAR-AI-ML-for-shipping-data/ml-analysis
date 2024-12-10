@@ -265,9 +265,10 @@ def update_raw_pca_data(n_clicks):
 
 @callback(
     Output("x-values", "data"),
-    Output("y-labeled", "data"),
+    Output("y-labeled", "data", allow_duplicate=True),
     Output("y-predicted", "data"),
     Input("fitted-data", "data"),
+    prevent_initial_call="initial_duplicate",
 )
 def set_initial_xy_values(dataf):
     df = pd.read_json(StringIO(dataf))
@@ -311,6 +312,24 @@ def display_label_container(click_data, labels):
 
     label = labels[labels[filecolumn] == trajectory_id]["label"].iloc[0]
     return label, {"visibility": "visible"}
+
+
+@callback(
+    Output("y-labeled", "data", allow_duplicate=True),
+    Input("y-labeled", "data"),
+    Input("trajectories-scatter", "clickData"),
+    Input("label-selector", "value"),
+    prevent_initial_call="initial_duplicate",
+)
+def update_label(all_labels, click_data, label):
+    if click_data is None:
+        return no_update
+
+    trajectory_id = f"file_{click_data["points"][0]["customdata"][0]}"
+    labels = pd.read_json(StringIO(all_labels))
+    labels.loc[labels[filecolumn]==trajectory_id, "label"] = label
+
+    return labels.to_json()
 
 
 @callback(Input("y-labeled", "data"))

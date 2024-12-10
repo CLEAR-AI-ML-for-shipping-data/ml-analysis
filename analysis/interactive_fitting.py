@@ -162,10 +162,23 @@ def render_trajectory_image(hoverData: Dict, clickData):
     return fig
 
 
-@callback(Output("trajectories-scatter", "figure"), Input("raw-pca-data", "data"))
-def plot_trajectory_points(plot_json):
+@callback(
+    Output("trajectories-scatter", "figure"),
+    Input("raw-pca-data", "data"),
+    Input("y-predicted", "data"),
+)
+def plot_trajectory_points(plot_json, predicted_labels):
     plot_df = pd.read_json(StringIO(plot_json))
+    plot_df = plot_df.drop(columns="class")
+
+    plabels = pd.read_json(StringIO(predicted_labels))
+
+    plot_df = pd.merge(plot_df, plabels, on=filecolumn)
     plot_df[filecolumn] = plot_df[filecolumn].apply(lambda x: x[5:])
+    color_column = "class"
+    if len(plot_df[color_column].unique() == 1):
+        color_column = None
+
     fig = px.scatter_3d(
         data_frame=plot_df,
         x="xcol",
@@ -174,7 +187,7 @@ def plot_trajectory_points(plot_json):
         custom_data=filecolumn,
         size="ms",
         opacity=0.5,
-        color="class",
+        color=color_column,
     )
     fig.update_layout(margin={"l": 0, "b": 0, "t": 0, "r": 0}, hovermode="closest")
     return fig
@@ -290,7 +303,7 @@ def set_initial_xy_values(dataf):
     # print(y_labeled[0:5])
     # y_labeled_bytestring = y_labeled.tobytes().decode(encoding=ENCODING)
 
-    y_prediction = df.loc[:, filecolumn].copy()
+    y_prediction = df.loc[:, [filecolumn]].copy()
     y_prediction["class"] = 0
 
     return x_values.to_json(), y_labeled.to_json(), y_prediction.to_json()
@@ -327,7 +340,7 @@ def update_label(all_labels, click_data, label):
 
     trajectory_id = f"file_{click_data["points"][0]["customdata"][0]}"
     labels = pd.read_json(StringIO(all_labels))
-    labels.loc[labels[filecolumn]==trajectory_id, "label"] = label
+    labels.loc[labels[filecolumn] == trajectory_id, "label"] = label
 
     return labels.to_json()
 

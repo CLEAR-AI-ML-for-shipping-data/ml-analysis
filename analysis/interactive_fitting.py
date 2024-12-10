@@ -172,7 +172,7 @@ def render_trajectory_image(hoverData: Dict, clickData):
 
 @callback(Output("trajectories-scatter", "figure"), Input("raw-pca-data", "data"))
 def plot_trajectory_points(plot_json):
-    plot_df = pd.read_json(plot_json)
+    plot_df = pd.read_json(StringIO(plot_json))
     plot_df[filecolumn] = plot_df[filecolumn].apply(lambda x: x[5:])
     fig = px.scatter_3d(
         data_frame=plot_df,

@@ -6,9 +6,7 @@ from typing import Dict
 import h5py
 import numpy as np
 import pandas as pd
-import plotly as ply
 import plotly.express as px
-import plotly.graph_objects as go
 from dash import Dash, Input, Output, callback, callback_context, dcc, html, no_update
 from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
@@ -23,31 +21,7 @@ args = parser.parse_args()
 embeddings_file = args.embeddings
 arrays_file = args.image_archive
 
-# edf = pd.read_csv(embeddings_file, sep=";", index_col=0)
-# df = edf.copy()
-#
-# embeddings_columns = [col for col in df.columns if "emb_dim" in col]
-#
-# pca_decomposer = PCA()
-# pca_vectors = pca_decomposer.fit_transform(df.loc[:, embeddings_columns].values)
-#
-# xvalues = df.loc[:, embeddings_columns]
-# xvalues = pca_vectors[:, :3]
-#
 filecolumn = "filename"
-# # plot_df = df[[filecolumn]].copy()
-# plot_df = df[[filecolumn, "class"]].copy()
-# plot_df["xcol"] = xvalues[:, 0]
-# plot_df["ycol"] = xvalues[:, 1]
-# plot_df["zcol"] = xvalues[:, 2]
-# plot_df["ms"] = 10
-#
-# plot_df["class"]= plot_df["class"].apply(
-#     lambda x: {"regular": "normal", "outlier": "outlier"}[x]
-# )
-
-# plot_df.sort_values(by="class", inplace=True)
-# plot_df["class"] = df["class"]
 
 
 def _no_matchin_data_message():
@@ -87,7 +61,6 @@ app.layout = html.Div(
             [
                 dcc.Graph(
                     id="trajectories-scatter",
-                    # hoverData={"points": [{"customdata": "Japan"}]},
                     style={
                         "width": "100vh",
                         "height": "100vh",
@@ -96,9 +69,6 @@ app.layout = html.Div(
             ],
             style={
                 "width": "60%",
-                # "height": "74%",
-                # "width": "100vh",
-                # "height": "100vh",
                 "display": "inline-block",
                 "padding": "0 20",
             },
@@ -115,7 +85,6 @@ app.layout = html.Div(
                 dcc.Graph(
                     id="show-related-images",
                     style={
-                        # "width": "100vh",
                         "height": "60%",
                     },
                 ),
@@ -182,28 +151,28 @@ def plot_trajectory_points(plot_json):
         custom_data=filecolumn,
         size="ms",
         opacity=0.5,
-        # mode="markers",
-        # marker_symbol="circle",
         color="class",
-        # color=plot_colors,
     )
-    # fig.update_traces(customdata=plot_df[filecolumn])
     fig.update_layout(margin={"l": 0, "b": 0, "t": 0, "r": 0}, hovermode="closest")
     return fig
 
 
 @callback(
-    Output("show-related-images", "figure"), Input("trajectories-scatter", "clickData"), Input("raw-pca-data", "data")
+    Output("show-related-images", "figure"),
+    Input("trajectories-scatter", "clickData"),
+    Input("raw-pca-data", "data"),
 )
 def update_related_images(clickData, plot_json):
     if clickData is None:
         return _no_matchin_data_message()
 
     plot_df = pd.read_json(StringIO(plot_json))
+
+    # in the dataframe we prepend the filename with "file_" to prevent
+    # converting to float here we remove those first 5 characters again
     plot_df[filecolumn] = plot_df[filecolumn].apply(lambda x: x[5:])
 
     click_dict = clickData["points"][0]
-    # c_x, c_y, c_z = click_dict["x"], click_dict["y"], click_dict["z"]
 
     distances = np.zeros_like(plot_df["xcol"].values)
     for axis in ["x", "y", "z"]:
@@ -222,10 +191,7 @@ def update_related_images(clickData, plot_json):
         filename = plot_df.iloc[df_index].loc[filecolumn]
         distance = distances[df_index]
 
-        subplot = show_hdf5_image(filename)
-
         fig.add_trace(show_hdf5_image(filename).data[0], row=plot_row, col=plot_col)
-
 
     fig.update_layout(
         {
@@ -238,21 +204,23 @@ def update_related_images(clickData, plot_json):
     return fig
 
 
-@callback(Output("raw-pca-data", "data"),
-          Output("fitted-data", "data"),
-          Input("like-button", "n_clicks"))
+@callback(
+    Output("raw-pca-data", "data"),
+    Output("fitted-data", "data"),
+    Input("like-button", "n_clicks"),
+)
 def update_raw_pca_data(n_clicks):
     edf = pd.read_csv(embeddings_file, sep=";", index_col=0)
     df = edf.copy()
-    
+
     embeddings_columns = [col for col in df.columns if "emb_dim" in col]
-    
+
     pca_decomposer = PCA()
     pca_vectors = pca_decomposer.fit_transform(df.loc[:, embeddings_columns].values)
-    
+
     xvalues = df.loc[:, embeddings_columns]
     xvalues = pca_vectors[:, :3]
-    
+
     filecolumn = "filename"
     # plot_df = df[[filecolumn]].copy()
     plot_df = df[[filecolumn, "class"]].copy()
@@ -262,14 +230,15 @@ def update_raw_pca_data(n_clicks):
     plot_df["ycol"] = xvalues[:, 1]
     plot_df["zcol"] = xvalues[:, 2]
     plot_df["ms"] = 10
-    
-    plot_df["class"]= plot_df["class"].apply(
+
+    plot_df["class"] = plot_df["class"].apply(
         lambda x: {"regular": "normal", "outlier": "outlier"}[x]
     )
-    
+
     df[filecolumn] = df[filecolumn].apply(lambda x: f"file_{x}")
 
     return plot_df.to_json(), df.to_json()
+
 
 # @callback(Output("fitted-data", "data"),
 # Input()

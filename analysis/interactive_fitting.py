@@ -1,6 +1,7 @@
 import argparse
 import pickle
 from io import StringIO
+import json
 from time import time
 from typing import Dict
 
@@ -98,7 +99,8 @@ app.layout = html.Div(
                                 {"label": "Outlier", "value": 1},
                             ],
                             inline=True,
-                        )
+                        ),
+                        html.Button("Least certain trajectory?", id="query-model"),
                     ],
                     id="label-prediction-container",
                 ),
@@ -108,6 +110,7 @@ app.layout = html.Div(
                         "height": "60%",
                     },
                 ),
+                html.Button("Fit model!", id="run-fit-model"),
             ],
             style={"display": "inline-block", "vertical-align": "top", "width": "40%"},
         ),
@@ -120,6 +123,8 @@ app.layout = html.Div(
                 dcc.Store(id="x-values"),
                 dcc.Store(id="y-labeled"),
                 dcc.Store(id="y-predicted"),
+                dcc.Store(id="selected-data-point"),
+                dcc.Store(id="queried-data-point"),
             ]
         ),
     ]
@@ -149,11 +154,13 @@ def update_stored_data(stored_data, n_clicks, clicked_data):
 @callback(
     Output("show-trajectory", "figure"),
     Input("trajectories-scatter", "hoverData"),
-    Input("trajectories-scatter", "clickData"),
+    # Input("trajectories-scatter", "clickData"),
+    Input("selected-data-point", "data"),
     prevent_initial_call=True,
 )
 def render_trajectory_image(hoverData: Dict, clickData):
     if clickData is not None:
+        # print(clickData)
         filename = clickData["points"][0]["customdata"][0]
     else:
         filename = hoverData["points"][0]["customdata"][0]
@@ -169,15 +176,21 @@ def render_trajectory_image(hoverData: Dict, clickData):
 )
 def plot_trajectory_points(plot_json, predicted_labels):
     plot_df = pd.read_json(StringIO(plot_json))
-    plot_df = plot_df.drop(columns="class")
 
-    plabels = pd.read_json(StringIO(predicted_labels))
+    # try:
+    if predicted_labels is not None:
+        plabels = pd.read_json(StringIO(predicted_labels))
+        plot_df = plot_df.drop(columns="class")
 
-    plot_df = pd.merge(plot_df, plabels, on=filecolumn)
+        plot_df = pd.merge(plot_df, plabels, on=filecolumn)
+
+    # except ValueError:
+    #     pass
     plot_df[filecolumn] = plot_df[filecolumn].apply(lambda x: x[5:])
     color_column = "class"
-    if len(plot_df[color_column].unique() == 1):
-        color_column = None
+    # print(plot_df[color_column].unique())
+    # if len(plot_df[color_column].unique() == 1):
+    #     color_column = None
 
     fig = px.scatter_3d(
         data_frame=plot_df,
@@ -225,7 +238,7 @@ def update_related_images(clickData, plot_json):
         plot_col = i % cols + 1
         df_index = rown_nr_sorted_by_distance[i + 1]
         filename = plot_df.iloc[df_index].loc[filecolumn]
-        distance = distances[df_index]
+        # distance = distances[df_index]
 
         fig.add_trace(show_hdf5_image(filename).data[0], row=plot_row, col=plot_col)
 
@@ -279,7 +292,7 @@ def update_raw_pca_data(n_clicks):
 @callback(
     Output("x-values", "data"),
     Output("y-labeled", "data", allow_duplicate=True),
-    Output("y-predicted", "data"),
+    Output("y-predicted", "data", allow_duplicate=True),
     Input("fitted-data", "data"),
     prevent_initial_call="initial_duplicate",
 )
@@ -304,7 +317,7 @@ def set_initial_xy_values(dataf):
     # y_labeled_bytestring = y_labeled.tobytes().decode(encoding=ENCODING)
 
     y_prediction = df.loc[:, [filecolumn]].copy()
-    y_prediction["class"] = 0
+    y_prediction["class"] = "Regular"
 
     return x_values.to_json(), y_labeled.to_json(), y_prediction.to_json()
 
@@ -312,25 +325,34 @@ def set_initial_xy_values(dataf):
 @callback(
     Output("label-selector", "value"),
     Output("label-selector", "style"),
-    Input("trajectories-scatter", "clickData"),
+    # Input("trajectories-scatter", "clickData"),
+    Input("selected-data-point", "data"),
     Input("y-labeled", "data"),
 )
 def display_label_container(click_data, labels):
+    print("Running label displayer")
+    print(click_data)
     if click_data is None:
         return -1, {"visibility": "hidden"}
 
     trajectory_id = f"file_{click_data["points"][0]["customdata"][0]}"
+    print(trajectory_id)
 
     labels = pd.read_json(StringIO(labels))
+    print(labels[labels["label"]!=-1])
 
     label = labels[labels[filecolumn] == trajectory_id]["label"].iloc[0]
+    print(labels[labels[filecolumn] == trajectory_id])
+
+    print("Current label:", label)
     return label, {"visibility": "visible"}
 
 
 @callback(
     Output("y-labeled", "data", allow_duplicate=True),
     Input("y-labeled", "data"),
-    Input("trajectories-scatter", "clickData"),
+    # Input("trajectories-scatter", "clickData"),
+    Input("selected-data-point", "data"),
     Input("label-selector", "value"),
     prevent_initial_call="initial_duplicate",
 )
@@ -347,9 +369,128 @@ def update_label(all_labels, click_data, label):
 
 @callback(Input("y-labeled", "data"))
 def print_labels(labels):
-    ldf = pd.read_json(StringIO(labels))
+    ldf = pd.read_json(StringIO(labels))["label"].values
     # ldf = np.frombuffer(labels.encode(encoding=ENCODING))
-    # print(ldf[0:10])
+    print("Currently labeled:")
+    print(ldf[ldf >= 0])
+
+
+@callback(
+    Output("y-predicted", "data", allow_duplicate=True),
+    Input("run-fit-model", "n_clicks"),
+    Input("x-values", "data"),
+    Input("y-labeled", "data"),
+    prevent_initial_call="initial_duplicate",
+)
+def fit_predict_model(button_click, x_values, y_labels):
+    if callback_context.triggered_id != "run-fit-model":
+        return no_update
+        # return None
+
+    x_values = pd.read_json(StringIO(x_values))
+    files = x_values[[filecolumn]].copy()
+
+    x_values = x_values.drop(columns=filecolumn)
+    y_values = pd.read_json(StringIO(y_labels))["label"].values
+    clf = SklearnClassifier(
+        SVC(
+            probability=True,
+            kernel="rbf",
+            # C=30.0,
+            gamma=0.03,
+        ),
+        classes=[0, 1],
+        missing_label=-1,
+    )
+    clf.fit(x_values, y_values)
+
+    files["class"] = clf.predict(x_values)
+    # print(files.describe())
+    files["class"] = files["class"].apply(lambda x: ["Regular", "Outlier"][x])
+
+    return files.to_json()
+
+
+@callback(
+    Output("queried-data-point", "data", allow_duplicate=True),
+    Input("query-model", "n_clicks"),
+    Input("x-values", "data"),
+    Input("y-labeled", "data"),
+    Input("raw-pca-data", "data"),
+    prevent_initial_call="initial_duplicate",
+)
+def query_model(button_click, x_values, y_labels, pca_data):
+    if callback_context.triggered_id != "query-model":
+        return no_update
+        # return None
+
+    x_values = pd.read_json(StringIO(x_values))
+    files = x_values[[filecolumn]].copy()
+
+    x_values = x_values.drop(columns=filecolumn)
+    y_values = pd.read_json(StringIO(y_labels))["label"].values
+    clf = SklearnClassifier(
+        SVC(
+            probability=True,
+            kernel="rbf",
+            # C=30.0,
+            gamma=0.03,
+        ),
+        classes=[0, 1],
+        missing_label=-1,
+    )
+    clf.fit(x_values, y_values)
+    qs = UncertaintySampling(method="least_confident", random_state=42, missing_label=-1)
+    query_idx = qs.query(x_values, y_values, clf)[0]
+    file_id = files.loc[query_idx, filecolumn][5:]
+    # print(file_id)
+
+    pcas = pd.read_json(StringIO(pca_data)).loc[query_idx, ["xcol", "ycol", "zcol"]]
+    # print(pcas.shape)
+
+    pca_dict = {}
+    for col_index, axis in   enumerate(["x", "y", "z"]) :
+        pca_dict.update({axis: pcas.values[col_index]})
+    # pcas = pcas.rename(columns={f"{axis}col": axis for axis in ["x", "y", "z"]})
+    # pcas = pcas.loc[query_idx, ["x", "y", "z"]].to_dict()
+    pca_dict.update({"customdata": [file_id,]})
+
+
+    clickdata = {"points": [pca_dict]}
+    # print(clickdata)
+
+    # files["class"] = clf.predict(x_values)
+    # print(files.describe())
+    # files["class"] = files["class"].apply(lambda x: ["Regular", "Outlier"][x])
+    #
+    # return files.to_json()
+    # return json.dumps(clickdata)
+    return clickdata
+
+
+@callback(Input("selected-data-point", "data"))
+def show_click_data(clickData):
+
+    print("-------------")
+    print("Updating selected data point")
+    print(clickData)
+
+
+@callback(
+    Output("selected-data-point", "data"),
+    Input("trajectories-scatter", "clickData"),
+    Input("queried-data-point", "data")
+)
+def update_selection(clickData, queryData):
+    # print("----------------------------------------")
+    # print(type(clickData))
+    # print(type(queryData))
+    # print(callback_context.triggered_prop_ids)
+    if "trajectories-scatter.clickData" in callback_context.triggered_prop_ids.keys():
+        return clickData
+    else:
+        return queryData
+
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import argparse
+from io import StringIO
 from time import time
 from typing import Dict
 
@@ -198,7 +199,7 @@ def update_related_images(clickData, plot_json):
     if clickData is None:
         return _no_matchin_data_message()
 
-    plot_df = pd.read_json(plot_json)
+    plot_df = pd.read_json(StringIO(plot_json))
     plot_df[filecolumn] = plot_df[filecolumn].apply(lambda x: x[5:])
 
     click_dict = clickData["points"][0]

@@ -110,7 +110,7 @@ app.layout = html.Div(
                         "height": "60%",
                     },
                 ),
-                html.Button("Fit model!", id="run-fit-model"),
+                html.Button("Make new predictions!", id="run-fit-model"),
             ],
             style={"display": "inline-block", "vertical-align": "top", "width": "40%"},
         ),

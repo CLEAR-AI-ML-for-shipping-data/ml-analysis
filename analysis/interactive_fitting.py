@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from dash import Dash, Input, Output, callback, callback_context, dcc, html, no_update
+from loguru import logger
 from plotly.subplots import make_subplots
 from skactiveml.classifier import SklearnClassifier
 from skactiveml.pool import UncertaintySampling
@@ -391,18 +392,23 @@ def print_labels(labels):
     Input("y-labeled", "data"),
     Input("raw-pca-data", "data"),
     Input("svc-model", "data"),
+    Input("svm-C-param", "value"),
+    Input("svm-gamma-param", "value"),
     prevent_initial_call="initial_duplicate",
 )
-def query_model(button_click, x_values, y_labels, pca_data, model):
+def query_model(button_click, x_values, y_labels, pca_data, model, svm_C, svm_gamma):
     if callback_context.triggered_id != "query-model":
         return no_update, no_update, no_update
         # return None
     if model is not None:
-        clf = pickle.loads(bytes.fromhex(model))
+        clf: SklearnClassifier = pickle.loads(bytes.fromhex(model))
     else:
         clf = SklearnClassifier(
             SVC(probability=True, kernel="rbf"), classes=[0, 1], missing_label=-1
         )
+    logger.debug(f"Using model of type {type(clf)}")
+
+    clf.estimator.set_params(C=svm_C, gamma=svm_gamma)
 
     x_values = pd.read_json(StringIO(x_values))
     files = x_values[[filecolumn]].copy()

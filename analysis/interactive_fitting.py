@@ -131,7 +131,9 @@ app.layout = html.Div(
                         "height": "60%",
                     },
                 ),
-                html.Button("Make new predictions!", id="run-fit-model"),
+                html.Button("Download Excel", id="btn-download-excel"),
+                html.Button("Download CSV", id="btn-download-csv"),
+                dcc.Download(id="download-data"),
             ],
             style={"display": "inline-block", "vertical-align": "top", "width": "40%"},
         ),
@@ -484,6 +486,29 @@ def update_selection(clickData, queryData):
     else:
         return queryData
 
+
+@callback(
+    Output("download-data", "data"),
+    Input("btn-download-excel", "n_clicks"),
+    Input("btn-download-csv", "n_clicks"),
+    Input("x-values", "data"),
+    Input("y-labeled", "data"),
+    Input("y-predicted", "data"),
+    prevent_initial_call=True,
+)
+def download_excel(n_clicks_excel, n_clicks_csv, x_values, y_labeled, y_predicted):
+    if callback_context.triggered_id not in ["btn-download-excel", "btn-download-csv"]:
+        return no_update
+    x_values = pd.read_json(StringIO(x_values))
+    y_labeled = pd.read_json(StringIO(y_labeled))
+    y_predicted = pd.read_json(StringIO(y_predicted))
+    out_df = pd.merge(x_values, y_labeled, on=filecolumn)
+    out_df = pd.merge(out_df, y_predicted, on=filecolumn)
+
+    if callback_context.triggered_id == "btn-download-excel":
+        return dcc.send_data_frame(out_df.to_excel, "predictions.xlsx")
+    else:
+        return dcc.send_data_frame(out_df.to_csv, "predictions.csv")
 
 
 if __name__ == "__main__":

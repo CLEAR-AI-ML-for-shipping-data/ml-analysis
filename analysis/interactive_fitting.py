@@ -125,6 +125,7 @@ app.layout = html.Div(
                 dcc.Store(id="y-predicted"),
                 dcc.Store(id="selected-data-point"),
                 dcc.Store(id="queried-data-point"),
+                dcc.Store(id="svc-model"),
             ]
         ),
     ]

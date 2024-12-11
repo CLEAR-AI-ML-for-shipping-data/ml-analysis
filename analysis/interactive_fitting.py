@@ -105,7 +105,7 @@ app.layout = html.Div(
                         dcc.Input(
                             id="svm-gamma-param", type="number", value=0.03, min=0
                         ),
-                        dcc.Input(id="svm-C-param", type="number", value=2.5, min=0),
+                        dcc.Input(id="svm-C-param", type="number", value=1.0, min=0),
                     ],
                     id="label-prediction-container",
                 ),

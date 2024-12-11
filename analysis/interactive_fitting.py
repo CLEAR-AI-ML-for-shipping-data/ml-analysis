@@ -1,7 +1,7 @@
 import argparse
+import json
 import pickle
 from io import StringIO
-import json
 from time import time
 from typing import Dict
 
@@ -342,7 +342,7 @@ def display_label_container(click_data, labels):
     print(trajectory_id)
 
     labels = pd.read_json(StringIO(labels))
-    print(labels[labels["label"]!=-1])
+    print(labels[labels["label"] != -1])
 
     label = labels[labels[filecolumn] == trajectory_id]["label"].iloc[0]
     print(labels[labels[filecolumn] == trajectory_id])
@@ -406,24 +406,27 @@ def query_model(button_click, x_values, y_labels, pca_data, model):
     x_values = x_values.drop(columns=filecolumn)
     y_values = pd.read_json(StringIO(y_labels))["label"].values
     clf.fit(x_values, y_values)
-    qs = UncertaintySampling(method="least_confident", random_state=42, missing_label=-1)
+
+    qs = UncertaintySampling(
+        method="least_confident", random_state=42, missing_label=-1
+    )
     query_idx = qs.query(x_values, y_values, clf)[0]
     file_id = files.loc[query_idx, filecolumn][5:]
-    # print(file_id)
 
     pcas = pd.read_json(StringIO(pca_data)).loc[query_idx, ["xcol", "ycol", "zcol"]]
-    # print(pcas.shape)
 
     pca_dict = {}
-    for col_index, axis in   enumerate(["x", "y", "z"]) :
+    for col_index, axis in enumerate(["x", "y", "z"]):
         pca_dict.update({axis: pcas.values[col_index]})
-    # pcas = pcas.rename(columns={f"{axis}col": axis for axis in ["x", "y", "z"]})
-    # pcas = pcas.loc[query_idx, ["x", "y", "z"]].to_dict()
-    pca_dict.update({"customdata": [file_id,]})
-
+    pca_dict.update(
+        {
+            "customdata": [
+                file_id,
+            ]
+        }
+    )
 
     clickdata = {"points": [pca_dict]}
-    # print(clickdata)
 
     files["class"] = clf.predict(x_values)
     files["class"] = files["class"].apply(lambda x: ["Regular", "Outlier"][x])
@@ -443,7 +446,7 @@ def show_click_data(clickData):
 @callback(
     Output("selected-data-point", "data"),
     Input("trajectories-scatter", "clickData"),
-    Input("queried-data-point", "data")
+    Input("queried-data-point", "data"),
 )
 def update_selection(clickData, queryData):
     # print("----------------------------------------")

@@ -101,6 +101,10 @@ app.layout = html.Div(
                             inline=True,
                         ),
                         html.Button("Least certain trajectory?", id="query-model"),
+                        dcc.Input(
+                            id="svm-gamma-param", type="number", value=0.03, min=0
+                        ),
+                        dcc.Input(id="svm-C-param", type="number", value=2.5, min=0),
                     ],
                     id="label-prediction-container",
                 ),

@@ -416,32 +416,31 @@ def fit_predict_model(button_click, x_values, y_labels):
 
 @callback(
     Output("queried-data-point", "data", allow_duplicate=True),
+    Output("svc-model", "data"),
+    Output("y-predicted", "data", allow_duplicate=True),
     Input("query-model", "n_clicks"),
     Input("x-values", "data"),
     Input("y-labeled", "data"),
     Input("raw-pca-data", "data"),
+    Input("svc-model", "data"),
     prevent_initial_call="initial_duplicate",
 )
-def query_model(button_click, x_values, y_labels, pca_data):
+def query_model(button_click, x_values, y_labels, pca_data, model):
     if callback_context.triggered_id != "query-model":
-        return no_update
+        return no_update, no_update, no_update
         # return None
+    if model is not None:
+        clf = pickle.loads(bytes.fromhex(model))
+    else:
+        clf = SklearnClassifier(
+            SVC(probability=True, kernel="rbf"), classes=[0, 1], missing_label=-1
+        )
 
     x_values = pd.read_json(StringIO(x_values))
     files = x_values[[filecolumn]].copy()
 
     x_values = x_values.drop(columns=filecolumn)
     y_values = pd.read_json(StringIO(y_labels))["label"].values
-    clf = SklearnClassifier(
-        SVC(
-            probability=True,
-            kernel="rbf",
-            # C=30.0,
-            gamma=0.03,
-        ),
-        classes=[0, 1],
-        missing_label=-1,
-    )
     clf.fit(x_values, y_values)
     qs = UncertaintySampling(method="least_confident", random_state=42, missing_label=-1)
     query_idx = qs.query(x_values, y_values, clf)[0]
@@ -462,13 +461,11 @@ def query_model(button_click, x_values, y_labels, pca_data):
     clickdata = {"points": [pca_dict]}
     # print(clickdata)
 
-    # files["class"] = clf.predict(x_values)
-    # print(files.describe())
-    # files["class"] = files["class"].apply(lambda x: ["Regular", "Outlier"][x])
+    files["class"] = clf.predict(x_values)
+    files["class"] = files["class"].apply(lambda x: ["Regular", "Outlier"][x])
     #
-    # return files.to_json()
-    # return json.dumps(clickdata)
-    return clickdata
+    out_clf = pickle.dumps(clf).hex()
+    return clickdata, out_clf, files.to_json()
 
 
 @callback(Input("selected-data-point", "data"))

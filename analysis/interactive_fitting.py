@@ -49,6 +49,22 @@ def _no_matchin_data_message():
         }
     }
 
+def _no_trajectory_selected_message():
+    return {
+        "layout": {
+            "xaxis": {"visible": False},
+            "yaxis": {"visible": False},
+            "annotations": [
+                {
+                    "text": "No point selected",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "showarrow": False,
+                    "font": {"size": 28},
+                }
+            ],
+        }
+    }
 
 def show_hdf5_image(filename):
     with h5py.File(arrays_file) as file:
@@ -171,7 +187,7 @@ def render_trajectory_image(hoverData: Dict, clickData):
     elif hoverData is not None:
         filename = hoverData["points"][0]["customdata"][0]
     else:
-        return no_update
+        return _no_trajectory_selected_message()
     fig = show_hdf5_image(filename)
     fig.update_layout(title=filename.split("/")[-1], margin={"l": 0, "b": 0, "r": 0})
     return fig

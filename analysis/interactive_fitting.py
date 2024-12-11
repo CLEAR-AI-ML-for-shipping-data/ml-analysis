@@ -162,8 +162,10 @@ def render_trajectory_image(hoverData: Dict, clickData):
     if clickData is not None:
         # print(clickData)
         filename = clickData["points"][0]["customdata"][0]
-    else:
+    elif hoverData is not None:
         filename = hoverData["points"][0]["customdata"][0]
+    else:
+        return no_update
     fig = show_hdf5_image(filename)
     fig.update_layout(title=filename.split("/")[-1], margin={"l": 0, "b": 0, "r": 0})
     return fig

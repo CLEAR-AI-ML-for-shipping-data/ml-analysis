@@ -345,8 +345,6 @@ def set_initial_xy_values(dataf):
     Input("y-labeled", "data"),
 )
 def display_label_container(click_data, labels):
-    print("Running label displayer")
-    print(click_data)
     if click_data is None:
         return -1, {"visibility": "hidden"}
 
@@ -354,10 +352,7 @@ def display_label_container(click_data, labels):
     logger.debug({f"Selected trajectory {trajectory_id}"})
 
     labels = pd.read_json(StringIO(labels))
-    print(labels[labels["label"] != -1])
-
     label = labels[labels[filecolumn] == trajectory_id]["label"].iloc[0]
-    print(labels[labels[filecolumn] == trajectory_id])
 
     logger.debug(f"Current label: {label}")
     return label, {"visibility": "visible"}

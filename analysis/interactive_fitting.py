@@ -184,7 +184,6 @@ def update_stored_data(stored_data, n_clicks, clicked_data):
 )
 def render_trajectory_image(hoverData: Dict, clickData):
     if clickData is not None:
-        # print(clickData)
         filename = clickData["points"][0]["customdata"][0]
     elif hoverData is not None:
         filename = hoverData["points"][0]["customdata"][0]
@@ -203,20 +202,14 @@ def render_trajectory_image(hoverData: Dict, clickData):
 def plot_trajectory_points(plot_json, predicted_labels):
     plot_df = pd.read_json(StringIO(plot_json))
 
-    # try:
     if predicted_labels is not None:
         plabels = pd.read_json(StringIO(predicted_labels))
         plot_df = plot_df.drop(columns="class")
 
         plot_df = pd.merge(plot_df, plabels, on=filecolumn)
 
-    # except ValueError:
-    #     pass
     plot_df[filecolumn] = plot_df[filecolumn].apply(lambda x: x[5:])
     color_column = "class"
-    # print(plot_df[color_column].unique())
-    # if len(plot_df[color_column].unique() == 1):
-    #     color_column = None
 
     fig = px.scatter_3d(
         data_frame=plot_df,
@@ -264,7 +257,6 @@ def update_related_images(clickData, plot_json):
         plot_col = i % cols + 1
         df_index = rown_nr_sorted_by_distance[i + 1]
         filename = plot_df.iloc[df_index].loc[filecolumn]
-        # distance = distances[df_index]
 
         fig.add_trace(show_hdf5_image(filename).data[0], row=plot_row, col=plot_col)
 
@@ -338,10 +330,6 @@ def set_initial_xy_values(dataf):
     y_labeled = df.loc[:, [filecolumn]].copy()
     y_labeled["label"] = -1
 
-    # y_labeled = np.full(x_values.shape[0], fill_value=-1)
-    # print(y_labeled[0:5])
-    # y_labeled_bytestring = y_labeled.tobytes().decode(encoding=ENCODING)
-
     y_prediction = df.loc[:, [filecolumn]].copy()
     y_prediction["class"] = "Regular"
 
@@ -396,7 +384,6 @@ def update_label(all_labels, click_data, label):
 @callback(Input("y-labeled", "data"))
 def print_labels(labels):
     ldf = pd.read_json(StringIO(labels))["label"].values
-    # ldf = np.frombuffer(labels.encode(encoding=ENCODING))
     logger.debug(f"Currently labeled values: {ldf[ldf >= 0]}")
 
 
@@ -416,7 +403,7 @@ def print_labels(labels):
 def query_model(button_click, x_values, y_labels, pca_data, model, svm_C, svm_gamma):
     if callback_context.triggered_id != "query-model":
         return no_update, no_update, no_update
-        # return None
+
     if model is not None:
         clf: SklearnClassifier = pickle.loads(bytes.fromhex(model))
     else:
@@ -457,7 +444,6 @@ def query_model(button_click, x_values, y_labels, pca_data, model, svm_C, svm_ga
 
     files["class"] = clf.predict(x_values)
     files["class"] = files["class"].apply(lambda x: ["Regular", "Outlier"][x])
-    #
     out_clf = pickle.dumps(clf).hex()
     return clickdata, out_clf, files.to_json()
 
@@ -473,10 +459,6 @@ def show_click_data(clickData):
     Input("queried-data-point", "data"),
 )
 def update_selection(clickData, queryData):
-    # print("----------------------------------------")
-    # print(type(clickData))
-    # print(type(queryData))
-    # print(callback_context.triggered_prop_ids)
     if "trajectories-scatter.clickData" in callback_context.triggered_prop_ids.keys():
         return clickData
     else:

@@ -362,7 +362,7 @@ def display_label_container(click_data, labels):
         return -1, {"visibility": "hidden"}
 
     trajectory_id = f"file_{click_data["points"][0]["customdata"][0]}"
-    print(trajectory_id)
+    logger.debug({f"Selected trajectory {trajectory_id}"})
 
     labels = pd.read_json(StringIO(labels))
     print(labels[labels["label"] != -1])
@@ -370,7 +370,7 @@ def display_label_container(click_data, labels):
     label = labels[labels[filecolumn] == trajectory_id]["label"].iloc[0]
     print(labels[labels[filecolumn] == trajectory_id])
 
-    print("Current label:", label)
+    logger.debug(f"Current label: {label}")
     return label, {"visibility": "visible"}
 
 
@@ -397,8 +397,7 @@ def update_label(all_labels, click_data, label):
 def print_labels(labels):
     ldf = pd.read_json(StringIO(labels))["label"].values
     # ldf = np.frombuffer(labels.encode(encoding=ENCODING))
-    print("Currently labeled:")
-    print(ldf[ldf >= 0])
+    logger.debug(f"Currently labeled values: {ldf[ldf >= 0]}")
 
 
 @callback(
@@ -465,10 +464,7 @@ def query_model(button_click, x_values, y_labels, pca_data, model, svm_C, svm_ga
 
 @callback(Input("selected-data-point", "data"))
 def show_click_data(clickData):
-
-    print("-------------")
-    print("Updating selected data point")
-    print(clickData)
+    logger.debug(f"Updating selected data point to: {clickData}")
 
 
 @callback(
@@ -512,7 +508,11 @@ def download_excel(n_clicks_excel, n_clicks_csv, x_values, y_labeled, y_predicte
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug=True
+    if debug is not True:
+        logger.remove()
+        logger.add(sys.stderr, level="INFO")
+    app.run(debug=debug)
 #     parser = argparse.ArgumentParser()
 #     parser.add_argument("-e", "--embeddings", help="Embeddings file", required=True)
 #     parser.add_argument(

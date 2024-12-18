@@ -50,6 +50,7 @@ def _no_matchin_data_message():
         }
     }
 
+
 def _no_trajectory_selected_message():
     return {
         "layout": {
@@ -66,6 +67,7 @@ def _no_trajectory_selected_message():
             ],
         }
     }
+
 
 def show_hdf5_image(filename):
     with h5py.File(arrays_file) as file:
@@ -125,6 +127,7 @@ app.layout = html.Div(
                         dcc.Input(id="svm-C-param", type="number", value=1.0, min=0),
                     ],
                     id="label-prediction-container",
+                    style={"inline": "true"},
                 ),
                 dcc.Graph(
                     id="show-related-images",

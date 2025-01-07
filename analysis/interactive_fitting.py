@@ -121,10 +121,31 @@ app.layout = html.Div(
                             inline=True,
                         ),
                         html.Button("Least certain trajectory?", id="query-model"),
-                        dcc.Input(
-                            id="svm-gamma-param", type="number", value=0.03, min=0
+                        html.Div(
+                            [
+                                html.H6("Gamma", id="svm-gamma-param-title"),
+                                dcc.Input(
+                                    id="svm-gamma-param",
+                                    type="number",
+                                    value=0.03,
+                                    min=0,
+                                ),
+                            ],
+                            style={
+                                "display": "inline-block",
+                                "text-align": "center",
+                                "padding": "5pt",
+                            },
                         ),
-                        dcc.Input(id="svm-C-param", type="number", value=1.0, min=0),
+                        html.Div(
+                            [
+                                html.H6("C", id="svm-C-param-title"),
+                                dcc.Input(
+                                    id="svm-C-param", type="number", value=1.0, min=0
+                                ),
+                            ],
+                            style={"display": "inline-block", "text-align": "center"},
+                        ),
                     ],
                     id="label-prediction-container",
                     style={"inline": "true"},

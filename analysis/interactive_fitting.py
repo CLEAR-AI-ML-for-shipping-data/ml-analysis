@@ -543,7 +543,7 @@ def download_excel(n_clicks_excel, n_clicks_csv, x_values, y_labeled, y_predicte
 
 
 if __name__ == "__main__":
-    debug=True
+    debug = True
     if debug is not True:
         logger.remove()
         logger.add(sys.stderr, level="INFO")

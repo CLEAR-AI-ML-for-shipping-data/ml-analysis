@@ -37,7 +37,7 @@ def main(embeddings_file: str, arrays_file: str):
     pca_vectors = pca_decomposer.fit_transform(df.loc[:, embeddings_columns].values)
 
     xvalues = df.loc[:, embeddings_columns]
-    xvalues = pca_vectors[:, :2]
+    # xvalues = pca_vectors[:, :3]
     centroid = np.expand_dims(xvalues.mean(axis=0), axis=0)
 
     distances = xvalues - centroid
@@ -54,9 +54,9 @@ def main(embeddings_file: str, arrays_file: str):
     clf = SklearnClassifier(
         SVC(
             probability=True,
-            kernel="poly",
+            kernel="rbf",
             # C=30.0,
-            # gamma=0.1,
+            gamma=0.03,
         ),
         classes=[0, 1],
     )
@@ -64,7 +64,7 @@ def main(embeddings_file: str, arrays_file: str):
     # clf = ParzenWindowClassifier(classes=[0,1])
     # clf = MixtureModelClassifier()
 
-    n_cycles = 15
+    n_cycles = 20
     # n_cycles = 5
     # qs = UncertaintySampling(method="entropy", random_state=42)
     qs = UncertaintySampling(method="least_confident", random_state=42)
@@ -110,6 +110,11 @@ def main(embeddings_file: str, arrays_file: str):
     highlight_points = pca_vectors[outlier_mask]
     dehighlight_points = pca_vectors[~outlier_mask]
 
+    df["class"] = "regular"
+    df.loc[outlier_mask, "class"] = "outlier"
+
+    df.to_csv("exported/fitted_data.csv", sep=";")
+
     # xx, yy = np.meshgrid(np.linspace(-6, 3, 200), np.linspace(-.6, .5, 200))
     # Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
     # Z = Z.reshape(xx.shape)
@@ -118,7 +123,8 @@ def main(embeddings_file: str, arrays_file: str):
 
     ax = plt.subplot()
     # ax.pcolormesh(xx, yy, -Z, cmap=plt.cm.RdBu)
-    plot_decision_boundary(clf, [[-6, -0.6], [2.5, 0.5]], ax)
+    # plot_decision_boundary(clf, [[-6, -0.6], [2.5, 0.5], [-0.5, 0.5]], ax)
+
     ax.scatter(dehighlight_points[:, 0], dehighlight_points[:, 1], c="tab:blue", s=2)
     ax.scatter(highlight_points[:, 0], highlight_points[:, 1], c="tab:orange")
     plt.show()

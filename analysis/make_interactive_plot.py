@@ -22,7 +22,6 @@ embeddings_file = args.embeddings
 arrays_file = args.image_archive
 
 edf = pd.read_csv(embeddings_file, sep=";", index_col=0)
-print(edf.shape)
 df = edf.copy()
 
 embeddings_columns = [col for col in df.columns if "emb_dim" in col]
@@ -39,8 +38,33 @@ plot_df["ycol"] = xvalues[:, 1]
 plot_df["zcol"] = xvalues[:, 2]
 plot_df["ms"] = 10
 
-# fig = go.Figure(data=go.Scatter(x=xvalues[:, 0], y=xvalues[:, 1], mode="markers", marker_symbol='circle'))
-# fig.show()
+
+def _no_matchin_data_message():
+    return {
+        "layout": {
+            "xaxis": {"visible": False},
+            "yaxis": {"visible": False},
+            "annotations": [
+                {
+                    "text": "No matching data",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "showarrow": False,
+                    "font": {"size": 28},
+                }
+            ],
+        }
+    }
+
+
+def show_hdf5_image(filename):
+    with h5py.File(arrays_file) as file:
+        farray = file[filename][()]
+    farray = np.transpose(farray, (1, 2, 0))
+    while farray.shape[-1] < 3:
+        farray = np.append(farray, np.zeros_like(farray)[:, :, 0:1], axis=-1)
+    return px.imshow(farray)
+
 
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
@@ -61,13 +85,14 @@ app.layout = html.Div(
                 )
             ],
             style={
-                "width": "74%", 
+                "width": "60%", 
                 # "height": "74%",
                 # "width": "100vh", 
                 # "height": "100vh",
                 "display": "inline-block", 
                 "padding": "0 20"
             },
+            id="scatter-plot-container"
         ),
         html.Div(
             [

@@ -1,0 +1,8 @@
+.popover {
+  width: 25%;
+  /* width: auto; */
+  outline-style: solid;
+  outline-color: red;
+  outline-width: thin;
+  background-color: white;
+}

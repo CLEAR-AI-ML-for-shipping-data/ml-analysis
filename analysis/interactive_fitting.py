@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from dash import Dash, Input, Output, callback, callback_context, dcc, html, no_update
+from dash_bootstrap_components import Popover, PopoverBody
 from loguru import logger
 from plotly.subplots import make_subplots
 from skactiveml.classifier import SklearnClassifier
@@ -130,6 +131,22 @@ app.layout = html.Div(
                                     value=0.03,
                                     min=0,
                                 ),
+                                Popover(
+                                    [
+                                        "Gamma defines the reach of a single training example. High gamma --> far reaching influence. (see ",
+                                        html.A(
+                                            "the SKLearn docs",
+                                            href="https://scikit-learn.org/stable/auto_examples/svm/plot_rbf_parameters.html",
+                                            target="_blank",
+                                        ),
+                                        ")",
+                                    ],
+                                    target="svm-gamma-param-title",
+                                    id="gamma-popover",
+                                    trigger="click",
+                                    hide_arrow=False,
+                                    placement="top",
+                                ),
                             ],
                             style={
                                 "display": "inline-block",
@@ -142,6 +159,22 @@ app.layout = html.Div(
                                 html.H6("C", id="svm-C-param-title"),
                                 dcc.Input(
                                     id="svm-C-param", type="number", value=1.0, min=0
+                                ),
+                                Popover(
+                                    [
+                                        "C regularizes SVM decision function. Higher C --> more complex decision function. (see ",
+                                        html.A(
+                                            "the SKLearn docs",
+                                            href="https://scikit-learn.org/stable/auto_examples/svm/plot_rbf_parameters.html",
+                                            target="_blank",
+                                        ),
+                                        ")",
+                                    ],
+                                    target="svm-C-param-title",
+                                    id="C-popover",
+                                    trigger="click",
+                                    hide_arrow=False,
+                                    placement="top",
                                 ),
                             ],
                             style={"display": "inline-block", "text-align": "center"},

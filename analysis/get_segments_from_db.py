@@ -15,6 +15,30 @@ POSTGRES_PORT = 5432
 POSTGRES_HOST = "localhost"
 
 
+def process_gdf_chunk(
+    df: gpd.GeoDataFrame,
+    hdf5_filename: str,
+    ship_id_col: str = "ship_id",
+    t_start_col: str = "start_dt",
+    t_end_col: str = "end_dt",
+    geom_col: str = "ais_data",
+    external_geoms: List[gpd.GeoDataFrame] = [],
+):
+    for row_nr in range(df.shape[0]):
+        logger.info(f"Processing row {row_nr}")
+        image = voyage_array_from_points(
+            df.iloc[[row_nr], :], convert_from_points=False
+        )
+        start_time = df.loc[row_nr, t_start_col].isoformat()
+        end_time = df.loc[row_nr, t_end_col].isoformat()
+
+        filename = f"{df.loc[row_nr, ship_id_col]}_{start_time}_{end_time}.npy"
+
+        with h5py.File(hdf5_filename, "a") as archive:
+            logger.info(f"Writing file {filename}")
+            archive.create_dataset(filename, data=image)
+
+
 def main(database_url: str, geometries: List[str]):
     engine = create_engine(database_url)
     # Need the following attributes from voyage_segments
@@ -32,7 +56,6 @@ def main(database_url: str, geometries: List[str]):
     logger.info(f"Connecting to {database_url}")
 
     chunksize = 10
-    # with engine.connect() as conn:
     conn = engine.connect()
     gdf_iterator = gpd.GeoDataFrame.from_postgis(
         "SELECT * FROM voyage_segments",
@@ -41,26 +64,13 @@ def main(database_url: str, geometries: List[str]):
         chunksize=chunksize,
     )
 
-    # logger.info(f"Extracted {gdf_iterator.shape[0]} trajectories")
-    # logger.info(gdf_iterator.columns)
-
     hdf5_file = "db_test.hdf5"
 
-    for df in gdf_iterator:
+    for i, df in enumerate(gdf_iterator):
+        logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
         df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
-        for row_nr in range(df.shape[0]):
-            logger.info(f"Processing row {row_nr}")
-            image = voyage_array_from_points(
-                df.iloc[[row_nr], :], convert_from_points=False
-            )
-            start_time = df.loc[row_nr, "start_dt"].isoformat()
-            end_time = df.loc[row_nr, "end_dt"].isoformat()
+        process_gdf_chunk(df, hdf5_file)
 
-            filename = f"{df.loc[row_nr, 'ship_id']}_{start_time}_{end_time}.npy"
-
-            with h5py.File(hdf5_file, "a") as archive:
-                logger.info(f"Writing file {filename}")
-                archive.create_dataset(filename, data=image)
     conn.close()
 
 

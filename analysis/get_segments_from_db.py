@@ -1,8 +1,10 @@
 import argparse
 
 import geopandas as gpd
+import h5py
 from sqlalchemy import create_engine
 
+from prepare_2layer_data import voyage_array_from_points
 POSTGRES_DB = "gis"
 POSTGRES_USER = "clear"
 POSTGRES_PASSWORD = "clear"
@@ -26,3 +28,17 @@ with engine.connect() as conn:
     )
     print(gdf.info())
     print(gdf[["ship_id", "start_dt", "end_dt", "ais_data"]])
+df = gdf[["ship_id", "start_dt", "end_dt", "ais_data"]]
+
+hdf5_file = "db_test.hdf5"
+
+for row_nr in range(df.shape[0]):
+    image = voyage_array_from_points(df.iloc[[row_nr], :], convert_from_points=False)
+    start_time = df.loc[row_nr, 'start_dt'].isoformat()
+    end_time= df.loc[row_nr, 'end_dt'].isoformat()
+
+
+    filename = f"{df.loc[row_nr, 'ship_id']}_{start_time}_{end_time}.npy"
+
+    with h5py.File(hdf5_file, "a") as archive:
+        archive.create_dataset(filename, data=image)

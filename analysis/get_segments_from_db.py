@@ -28,31 +28,40 @@ def main(database_url: str, geometries: List[str]):
     t1 = perf_counter()
 
     logger.info(f"Loaded external geometries in {int((t1-t0)*1_000):d}ms")
-    logger.info(f"Connecting to {database_url}")
-    with engine.connect() as conn:
-        gdf = gpd.GeoDataFrame.from_postgis(
-            "SELECT * FROM voyage_segments", conn, geom_col="ais_data", chunksize=9
-        )
-    logger.info(f"Extracted {gdf.shape[0]} trajectories")
-    logger.info(gdf.columns)
 
-    df = gdf[["ship_id", "start_dt", "end_dt", "ais_data"]]
+    logger.info(f"Connecting to {database_url}")
+
+    chunksize = 10
+    # with engine.connect() as conn:
+    conn = engine.connect()
+    gdf_iterator = gpd.GeoDataFrame.from_postgis(
+        "SELECT * FROM voyage_segments",
+        conn,
+        geom_col="ais_data",
+        chunksize=chunksize,
+    )
+
+    # logger.info(f"Extracted {gdf_iterator.shape[0]} trajectories")
+    # logger.info(gdf_iterator.columns)
 
     hdf5_file = "db_test.hdf5"
 
-    for row_nr in range(df.shape[0]):
-        logger.info(f"Processing row {row_nr}")
-        image = voyage_array_from_points(
-            df.iloc[[row_nr], :], convert_from_points=False
-        )
-        start_time = df.loc[row_nr, "start_dt"].isoformat()
-        end_time = df.loc[row_nr, "end_dt"].isoformat()
+    for df in gdf_iterator:
+        df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
+        for row_nr in range(df.shape[0]):
+            logger.info(f"Processing row {row_nr}")
+            image = voyage_array_from_points(
+                df.iloc[[row_nr], :], convert_from_points=False
+            )
+            start_time = df.loc[row_nr, "start_dt"].isoformat()
+            end_time = df.loc[row_nr, "end_dt"].isoformat()
 
-        filename = f"{df.loc[row_nr, 'ship_id']}_{start_time}_{end_time}.npy"
+            filename = f"{df.loc[row_nr, 'ship_id']}_{start_time}_{end_time}.npy"
 
-        with h5py.File(hdf5_file, "a") as archive:
-            logger.info(f"Writing file {filename}")
-            archive.create_dataset(filename, data=image)
+            with h5py.File(hdf5_file, "a") as archive:
+                logger.info(f"Writing file {filename}")
+                archive.create_dataset(filename, data=image)
+    conn.close()
 
 
 if __name__ == "__main__":

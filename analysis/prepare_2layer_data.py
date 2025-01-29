@@ -22,6 +22,7 @@ def voyage_array_from_points(
     resolution: int = 256,
     dtype: np.dtype = np.float32,
     filename: str = None,
+    convert_from_points: bool = True
 ):
     """Create a rasterized voyage array from a collection of coordinates.
 
@@ -33,6 +34,7 @@ def voyage_array_from_points(
         resolution: size of the output image
         dtype: datatype of the output array
         filename: file to save the array to
+        convert_from_points: whether the geometry is converted into a LineString or not
 
     Returns:
         a NumPy ndarray containing the rasterized voyage with possible coastline data
@@ -53,9 +55,12 @@ def voyage_array_from_points(
     transform = from_bounds(*square_box.total_bounds, resolution, resolution)
 
     # Create a line from the coordinates, and rasterize the line
-    travel_line = gpd.GeoDataFrame(
-        [{"geometry": LineString(data.geometry)}], crs="EPSG:4326"
-    )
+    if convert_from_points is True:
+        travel_line = gpd.GeoDataFrame(
+            [{"geometry": LineString(data.geometry)}], crs="EPSG:4326"
+        )
+    else:
+        travel_line = data
 
     image = rasterize(
         travel_line.geometry,

@@ -59,22 +59,20 @@ def main(database_url: str, geometries: List[str]):
     logger.info(f"Connecting to {database_url}")
 
     chunksize = 10
-    conn = engine.connect()
-    gdf_iterator = gpd.GeoDataFrame.from_postgis(
-        "SELECT * FROM voyage_segments",
-        conn,
-        geom_col="ais_data",
-        chunksize=chunksize,
-    )
-
     hdf5_file = "db_test.hdf5"
 
-    for i, df in enumerate(gdf_iterator):
-        logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
-        df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
-        process_gdf_chunk(df, hdf5_file)
+    with engine.connect() as conn:
+        gdf_iterator = gpd.GeoDataFrame.from_postgis(
+            "SELECT * FROM voyage_segments",
+            conn,
+            geom_col="ais_data",
+            chunksize=chunksize,
+        )
 
-    conn.close()
+        for i, df in enumerate(gdf_iterator):
+            logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
+            df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
+            process_gdf_chunk(df, hdf5_file)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import geopandas as gpd
 import h5py
 from loguru import logger
 from prepare_2layer_data import load_external_geo_data, voyage_array_from_points
+from shapely.geometry import box
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
@@ -30,7 +31,7 @@ def process_gdf_chunk(
 ):
     for row_nr in tqdm(range(df.shape[0])):
         image = voyage_array_from_points(
-            df.iloc[[row_nr], :], convert_from_points=False
+            df.iloc[[row_nr], :], convert_from_points=False, coastlines=external_geoms
         )
         start_time = df.loc[row_nr, t_start_col].isoformat()
         end_time = df.loc[row_nr, t_end_col].isoformat()
@@ -40,6 +41,18 @@ def process_gdf_chunk(
         with h5py.File(hdf5_filename, "a") as archive:
             logger.info(f"Writing file {filename}")
             archive.create_dataset(filename, data=image)
+
+
+def make_bounding_box(df: gpd.GeoDataFrame, margin_degrees: float = 1.0):
+    minx, miny, maxx, maxy = df.geometry.total_bounds
+    df_box = box(
+        minx=minx - margin_degrees,
+        miny=miny - margin_degrees,
+        maxx=maxx + margin_degrees,
+        maxy=maxy + margin_degrees,
+    )
+    df_box = gpd.GeoDataFrame([{"geometry": df_box}], crs="EPSG:4326")
+    return df_box
 
 
 def main(database_url: str, geometries: List[str]):
@@ -70,9 +83,18 @@ def main(database_url: str, geometries: List[str]):
         )
 
         for i, df in enumerate(gdf_iterator):
+            t0 = perf_counter()
+            # Trim the external geo datasets for faster overlapping with trajectories
+            logger.info("Cutting external data to size")
+            bbox_df = make_bounding_box(df)
+            cut_external_dfs = [
+                tgdf.overlay(bbox_df, how="intersection") for tgdf in external_dfs
+            ]
+            t1 = perf_counter()
+            logger.debug(f"Cut external geometries in {int((t1-t0)*1_000):d}ms")
             logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
             df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
-            process_gdf_chunk(df, hdf5_file)
+            process_gdf_chunk(df, hdf5_file, external_geoms=cut_external_dfs)
 
 
 if __name__ == "__main__":

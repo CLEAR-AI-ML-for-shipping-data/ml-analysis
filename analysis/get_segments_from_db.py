@@ -1,11 +1,12 @@
 import argparse
+from time import perf_counter
+from typing import List
 
 import geopandas as gpd
 import h5py
 from loguru import logger
+from prepare_2layer_data import load_external_geo_data, voyage_array_from_points
 from sqlalchemy import create_engine
-
-from prepare_2layer_data import voyage_array_from_points
 
 POSTGRES_DB = "gis"
 POSTGRES_USER = "clear"
@@ -14,10 +15,19 @@ POSTGRES_PORT = 5432
 POSTGRES_HOST = "localhost"
 
 
-def main(database_url: str):
+def main(database_url: str, geometries: List[str]):
     engine = create_engine(database_url)
     # Need the following attributes from voyage_segments
     # ship_id, start_dt, end_dt, ais_data
+
+    external_dfs = []
+    t0 = perf_counter()
+    for geometry_file in geometries:
+        logger.info(f"Loading {geometry_file}")
+        external_dfs.append(load_external_geo_data(geometry_file))
+    t1 = perf_counter()
+
+    logger.info(f"Loaded external geometries in {int((t1-t0)*1_000):d}ms")
     logger.info(f"Connecting to {database_url}")
     with engine.connect() as conn:
         gdf = gpd.GeoDataFrame.from_postgis(
@@ -46,10 +56,20 @@ def main(database_url: str):
 
 
 if __name__ == "__main__":
-    main()
     database_url = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--db_url", type=str, default=database_url, help="Postgres database url"
     )
+    parser.add_argument(
+        "-g",
+        "--geometries",
+        help="Specify one or more geometry files for extra information",
+        nargs="*",
+        default=[],
+    )
+
+    args = parser.parse_args()
+
+    main(database_url=args.db_url, geometries=args.geometries)

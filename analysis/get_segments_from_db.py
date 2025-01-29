@@ -17,7 +17,7 @@ POSTGRES_PORT = 5432
 POSTGRES_HOST = "localhost"
 
 logger.remove()
-logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
+logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True, level="INFO")
 
 
 def process_gdf_chunk(
@@ -39,7 +39,6 @@ def process_gdf_chunk(
         filename = f"{df.loc[row_nr, ship_id_col]}_{start_time}_{end_time}.npy"
 
         with h5py.File(hdf5_filename, "a") as archive:
-            logger.info(f"Writing file {filename}")
             archive.create_dataset(filename, data=image)
 
 
@@ -67,8 +66,7 @@ def main(database_url: str, geometries: List[str]):
         external_dfs.append(load_external_geo_data(geometry_file))
     t1 = perf_counter()
 
-    logger.info(f"Loaded external geometries in {int((t1-t0)*1_000):d}ms")
-
+    logger.debug(f"Loaded external geometries in {int((t1-t0)*1_000):d}ms")
     logger.info(f"Connecting to {database_url}")
 
     chunksize = 10
@@ -81,6 +79,7 @@ def main(database_url: str, geometries: List[str]):
             geom_col="ais_data",
             chunksize=chunksize,
         )
+        logger.info("Received dataframe iterator")
 
         for i, df in enumerate(gdf_iterator):
             t0 = perf_counter()

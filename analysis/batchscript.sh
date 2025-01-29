@@ -5,7 +5,7 @@
 #SBATCH -n 16
 
 echo "[`date`] Loading modules..."
-module load virtualenv/20.23.1-GCCcore-13.3.0 PyTorch-bundle/2.1.2-foss-2023a-CUDA-12.1.1 h5py/3.9.0-foss-2023a
+module load virtualenv/20.23.1-GCCcore-12.3.0 PyTorch-bundle/2.1.2-foss-2023a-CUDA-12.1.1 h5py/3.9.0-foss-2023a
 module load scikit-learn/1.3.1-gfbf-2023a scikit-image/0.22.0-foss-2023a
 
 module list

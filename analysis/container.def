@@ -1,0 +1,12 @@
+Bootstrap: localimage
+From: /apps/containers/PyTorch/PyTorch-2.5.0-NGC-24.09.sif
+
+%files
+    ./container_reqs.txt
+
+%post
+    pip install --upgrade --upgrade-strategy only-if-needed -r container_reqs.txt
+
+%runscript
+    python3 train_2layer_model.py -c double_layer_config.toml
+ 

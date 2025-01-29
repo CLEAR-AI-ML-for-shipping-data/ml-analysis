@@ -1,0 +1,10 @@
+dash>=2.18.2
+dash_bootstrap_components>=1.6.0
+h5py>=3.12.1
+loguru>=0.7.2
+numpy==1.24.4
+plotly>=5.24.1
+pydantic==2.9.2
+Shapely>=2.0.6
+toml==0.10.2
+tqdm>=4.66.5

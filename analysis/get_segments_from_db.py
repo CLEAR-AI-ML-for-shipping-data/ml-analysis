@@ -39,9 +39,8 @@ hdf5_file = "db_test.hdf5"
 for row_nr in range(df.shape[0]):
     logger.info(f"Processing row {row_nr}")
     image = voyage_array_from_points(df.iloc[[row_nr], :], convert_from_points=False)
-    start_time = df.loc[row_nr, 'start_dt'].isoformat()
-    end_time= df.loc[row_nr, 'end_dt'].isoformat()
-
+    start_time = df.loc[row_nr, "start_dt"].isoformat()
+    end_time = df.loc[row_nr, "end_dt"].isoformat()
 
     filename = f"{df.loc[row_nr, 'ship_id']}_{start_time}_{end_time}.npy"
 

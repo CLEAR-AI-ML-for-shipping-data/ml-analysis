@@ -7,12 +7,16 @@ import h5py
 from loguru import logger
 from prepare_2layer_data import load_external_geo_data, voyage_array_from_points
 from sqlalchemy import create_engine
+from tqdm import tqdm
 
 POSTGRES_DB = "gis"
 POSTGRES_USER = "clear"
 POSTGRES_PASSWORD = "clear"
 POSTGRES_PORT = 5432
 POSTGRES_HOST = "localhost"
+
+logger.remove()
+logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 
 
 def process_gdf_chunk(
@@ -24,8 +28,7 @@ def process_gdf_chunk(
     geom_col: str = "ais_data",
     external_geoms: List[gpd.GeoDataFrame] = [],
 ):
-    for row_nr in range(df.shape[0]):
-        logger.info(f"Processing row {row_nr}")
+    for row_nr in tqdm(range(df.shape[0])):
         image = voyage_array_from_points(
             df.iloc[[row_nr], :], convert_from_points=False
         )

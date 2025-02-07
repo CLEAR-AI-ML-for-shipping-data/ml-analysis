@@ -126,14 +126,17 @@ def main(
 
         for i, df in enumerate(gdf_iterator):
             t0 = perf_counter()
-            # Trim the external geo datasets for faster overlapping with trajectories
-            logger.info("Cutting external data to size")
-            bbox_df = make_bounding_box(df)
-            cut_external_dfs = [
-                tgdf.overlay(bbox_df, how="intersection") for tgdf in external_dfs
-            ]
-            t1 = perf_counter()
-            logger.debug(f"Cut external geometries in {int((t1-t0)*1_000):d}ms")
+            if external_dfs:
+                # Trim the external geo datasets for faster overlapping with trajectories
+                logger.info("Cutting external data to size")
+                bbox_df = make_bounding_box(df)
+                cut_external_dfs = [
+                    tgdf.overlay(bbox_df, how="intersection") for tgdf in external_dfs
+                ]
+                t1 = perf_counter()
+                logger.debug(f"Cut external geometries in {int((t1-t0)*1_000):d}ms")
+            else:
+                cut_external_dfs = []
             logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
             df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
             process_gdf_chunk(df, hdf5_file, external_geoms=cut_external_dfs)

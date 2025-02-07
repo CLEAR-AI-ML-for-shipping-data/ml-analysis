@@ -1,6 +1,6 @@
 import argparse
 from time import perf_counter
-from typing import List
+from typing import Dict, List
 
 import geopandas as gpd
 import h5py
@@ -54,7 +54,16 @@ def make_bounding_box(df: gpd.GeoDataFrame, margin_degrees: float = 1.0):
     return df_box
 
 
-def main(database_url: str, geometries: List[str]):
+def main(
+    database_url: str, geometries: List[str] = [], geometry_tables: Dict[str, str] = {}
+):
+    """
+
+    Args:
+        database_url:
+        geometries:
+        geometry_tables: dictionary of table and columns to be selected from geometry tables
+    """
     engine = create_engine(database_url)
     # Need the following attributes from voyage_segments
     # ship_id, start_dt, end_dt, ais_data
@@ -72,9 +81,43 @@ def main(database_url: str, geometries: List[str]):
     chunksize = 10
     hdf5_file = "db_test.hdf5"
 
+    # Here we build a the query looking like this:
+    # SELECT boxed.* [, <geom_table1>.geometry [, ...]]
+    # FROM (
+    #   SELECT ship_id, start_dt, end_dt, ais_data, ST_Envelope(ais_data) AS voyage_envelope
+    #   FROM <segment_table> ) AS boxed
+    # [
+    #   LEFT JOIN <geom_table1>
+    #   ON ST_Crosses(boxed.voyage_envelope, <geom_table1>.geometry)
+    #   [...]
+    # ]
+
+    segment_table = "voyage_segments"
+
+    select_boxed_segments = f"SELECT ship_id, start_dt, end_dt, ais_data, ST_Envelope(ais_data) AS voyage_envelope FROM {segment_table}"
+
+    select_string = "SELECT boxed.*"
+
+    for table, columns in geometry_tables.items():
+        if isinstance(columns, list):
+            for col in columns:
+                select_string += f", {table}.{col}"
+        else:
+            select_string += f", {table}.{columns}"
+
+    from_string = f"FROM ({select_boxed_segments}) AS boxed"
+
+    for table in geometry_tables.keys():
+        from_string += (
+            f" LEFT JOIN {table} ON ST_Crosses(boxed.voyage_envelope, {table}.geometry)"
+        )
+
+    query_string = f"{select_string} {from_string}"
+
     with engine.connect() as conn:
+        logger.info(query_string)
         gdf_iterator = gpd.GeoDataFrame.from_postgis(
-            "SELECT * FROM voyage_segments",
+            query_string,
             conn,
             geom_col="ais_data",
             chunksize=chunksize,
@@ -113,4 +156,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(database_url=args.db_url, geometries=args.geometries)
+    geometry_tables = {
+        "coastlines_fullres": "geometry",
+        "coastlines_highres": "geometry",
+    }
+    main(
+        database_url=args.db_url,
+        geometries=args.geometries,
+        geometry_tables=geometry_tables,
+    )

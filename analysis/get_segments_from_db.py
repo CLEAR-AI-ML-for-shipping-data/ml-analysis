@@ -1,14 +1,21 @@
 import argparse
+import math
 from time import perf_counter
 from typing import Dict, List
 
 import geopandas as gpd
-import h5py
+import pandas as pd
 from loguru import logger
-from prepare_2layer_data import load_external_geo_data, voyage_array_from_points
+from shapely import points
 from shapely.geometry import box
-from sqlalchemy import create_engine
-from tqdm import tqdm
+from sqlalchemy import create_engine, text
+from tqdm import tqdm, trange
+
+from prepare_2layer_data import (
+    load_external_geo_data,
+    time_windowing,
+    voyage_array_from_points,
+)
 
 POSTGRES_DB = "gis"
 POSTGRES_USER = "clear"
@@ -26,20 +33,46 @@ def process_gdf_chunk(
     ship_id_col: str = "ship_id",
     t_start_col: str = "start_dt",
     t_end_col: str = "end_dt",
-    geom_col: str = "ais_data",
+    geom_col: str = "coordinates",
+    timestamp_col: str = "timestamps",
     external_geoms: List[gpd.GeoDataFrame] = [],
+    conv_kernel_size: int = 1,
 ):
-    for row_nr in tqdm(range(df.shape[0])):
-        image = voyage_array_from_points(
-            df.iloc[[row_nr], :], convert_from_points=False, coastlines=external_geoms
+    for row_nr in trange(df.shape[0], leave=False):
+        # image = voyage_array_from_points(
+        #     df.iloc[[row_nr], :], convert_from_points=False, coastlines=external_geoms
+        # )
+        voyage_data: gpd.GeoSeries = df.iloc[row_nr]
+        timestamps = pd.DatetimeIndex(voyage_data[timestamp_col])
+        positions = voyage_data[geom_col].coords
+
+        data = gpd.GeoDataFrame(
+            data={
+                ship_id_col: voyage_data[ship_id_col],
+                geom_col: points(positions).tolist(),
+            },
+            index=timestamps,
+            geometry=geom_col,
+            crs="EPSG:4326",
         )
-        start_time = df.loc[row_nr, t_start_col].isoformat()
-        end_time = df.loc[row_nr, t_end_col].isoformat()
 
-        filename = f"{df.loc[row_nr, ship_id_col]}_{start_time}_{end_time}.npy"
+        time_windowing(
+            dataf=data,
+            coastlines=external_geoms,
+            zipfile=hdf5_filename,
+            prefix=voyage_data[ship_id_col],
+            export_dir=None,
+        )
 
-        with h5py.File(hdf5_filename, "a") as archive:
-            archive.create_dataset(filename, data=image)
+        # image[0] = convolve_image(image[0], kernel_size=conv_kernel_size)
+        #
+        # start_time = df.loc[row_nr, t_start_col].isoformat()
+        # end_time = df.loc[row_nr, t_end_col].isoformat()
+        #
+        # filename = f"{df.loc[row_nr, ship_id_col]}_{start_time}_{end_time}.npy"
+        #
+        # with h5py.File(hdf5_filename, "a") as archive:
+        #     archive.create_dataset(filename, data=image)
 
 
 def make_bounding_box(df: gpd.GeoDataFrame, margin_degrees: float = 1.0):
@@ -78,7 +111,7 @@ def main(
     logger.debug(f"Loaded external geometries in {int((t1-t0)*1_000):d}ms")
     logger.info(f"Connecting to {database_url}")
 
-    chunksize = 10
+    chunksize = 100
     hdf5_file = "db_test.hdf5"
 
     # Here we build a the query looking like this:
@@ -92,18 +125,28 @@ def main(
     #   [...]
     # ]
 
-    segment_table = "voyage_segments"
+    segment_table = "trajectories_2023_01"
 
-    select_boxed_segments = f"SELECT ship_id, start_dt, end_dt, ais_data, ST_Envelope(ais_data) AS voyage_envelope FROM {segment_table}"
+    ship_id_col = "mmsi"
+    coord_col = "coordinates"
+
+    select_boxed_segments = f"SELECT {ship_id_col}, start_dt, end_dt, timestamps, {coord_col}, ST_Envelope({coord_col}) AS voyage_envelope FROM {segment_table}"
 
     select_string = "SELECT boxed.*"
 
+    geom_columns_list = []
+
     for table, columns in geometry_tables.items():
+        geom_column = []
         if isinstance(columns, list):
             for col in columns:
-                select_string += f", {table}.{col}"
+                select_string += f", {table}.{col} AS {table}_{col}"
+                geom_column.append(f"{table}_{col}")
         else:
-            select_string += f", {table}.{columns}"
+            select_string += f", {table}.{columns} AS {table}_{columns}"
+            geom_column.append(f"{table}_{columns}")
+
+        geom_columns_list.append(geom_column)
 
     from_string = f"FROM ({select_boxed_segments}) AS boxed"
 
@@ -112,34 +155,59 @@ def main(
             f" LEFT JOIN {table} ON ST_Crosses(boxed.voyage_envelope, {table}.geometry)"
         )
 
-    query_string = f"{select_string} {from_string}"
+    from_string += f" INNER JOIN ships on boxed.mmsi = ships.mmsi"
+
+    where_string = "where ships.type_of_ship = 18"
+
+    query_string = f"{select_string} {from_string} {where_string} "
 
     with engine.connect() as conn:
+
+        total_rows = conn.execute(
+            text(f"select count(*) {from_string} {where_string}")
+        ).scalar()
+        total_chunks = math.ceil(total_rows / chunksize)
+
         logger.info(query_string)
         gdf_iterator = gpd.GeoDataFrame.from_postgis(
             query_string,
             conn,
-            geom_col="ais_data",
+            geom_col="coordinates",
             chunksize=chunksize,
         )
         logger.info("Received dataframe iterator")
 
-        for i, df in enumerate(gdf_iterator):
+        for i, df in enumerate(
+            tqdm(gdf_iterator, total=total_chunks, unit="chunk", dynamic_ncols=True)
+        ):
             t0 = perf_counter()
             if external_dfs:
                 # Trim the external geo datasets for faster overlapping with trajectories
-                logger.info("Cutting external data to size")
+                # logger.info("Cutting external data to size")
                 bbox_df = make_bounding_box(df)
                 cut_external_dfs = [
                     tgdf.overlay(bbox_df, how="intersection") for tgdf in external_dfs
                 ]
                 t1 = perf_counter()
-                logger.debug(f"Cut external geometries in {int((t1-t0)*1_000):d}ms")
+                # logger.debug(f"Cut external geometries in {int((t1-t0)*1_000):d}ms")
             else:
                 cut_external_dfs = []
-            logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
-            df = df[["ship_id", "start_dt", "end_dt", "ais_data"]]
-            process_gdf_chunk(df, hdf5_file, external_geoms=cut_external_dfs)
+            # logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
+            # logger.info(f"{df.columns}")
+            tdf = df[[ship_id_col, "start_dt", "end_dt", coord_col, "timestamps"]]
+            external_db_dfs = [
+                df[geom_columns].set_geometry(geom_columns[0], crs="EPSG:4326")
+                for geom_columns in geom_columns_list
+            ]
+
+            process_gdf_chunk(
+                tdf,
+                hdf5_file,
+                external_geoms=cut_external_dfs + external_db_dfs,
+                conv_kernel_size=5,
+                ship_id_col=ship_id_col,
+                geom_col=coord_col,
+            )
 
 
 if __name__ == "__main__":
@@ -160,8 +228,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     geometry_tables = {
-        "coastlines_fullres": "geometry",
-        "coastlines_highres": "geometry",
+        # "coastlines_fullres": "geometry",
+        # "coastlines_highres": "geometry",
     }
     main(
         database_url=args.db_url,

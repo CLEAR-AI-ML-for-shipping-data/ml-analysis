@@ -2,6 +2,7 @@ import h5py
 import torch
 
 from astromorph.astromorph.src.datasets.base_dataset import BaseDataset
+from make_thicker_line_plots import convolve_image
 
 
 class VoyageHDF5Dataset(BaseDataset):
@@ -29,6 +30,7 @@ class VoyageHDF5Dataset(BaseDataset):
             # See h5py documentation for more information
             image = file[self.filenames[index]][()]
 
+        image[0] = convolve_image(image[0], kernel_size=3)
         image = torch.from_numpy(image).float()
         image = image[None, :, :, :]
         images = self.augment_image(image)

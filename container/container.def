@@ -3,10 +3,14 @@ From: /apps/containers/PyTorch/PyTorch-2.5.0-NGC-24.09.sif
 
 %files
     ./container_reqs.txt
+    ../analysis /opt/clear-analysis
 
 %post
     pip install --upgrade --upgrade-strategy only-if-needed -r container_reqs.txt
 
+%environment
+     export PYTHONPATH="$PYTHONPATH:/opt/clear-analysis"
+
 %runscript
-    python3 train_2layer_model.py -c double_layer_config.toml
+    python3 /opt/clear-analysis/train_2layer_model.py $@
  

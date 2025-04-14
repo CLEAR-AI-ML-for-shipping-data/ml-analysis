@@ -9,7 +9,6 @@ import torch
 # Provide these to the namespace for the read models
 from astromorph.astromorph.src.byol import ByolTrainer
 from astromorph.astromorph.src.datasets import FilelistDataset
-from astromorph.astromorph.src.models import AstroMorphologyModel
 from astromorph.astromorph.src.settings import InferenceSettings
 from loguru import logger
 from skimage.transform import resize
@@ -75,7 +74,7 @@ def main(
     # Loading model
     logger.info(f"Loading pretrained model {model_name}...")
 
-    learner = torch.load(model_name)
+    learner: CoastalVoyageModel = torch.load(model_name)
     learner.eval()
     learner.to(device)
 

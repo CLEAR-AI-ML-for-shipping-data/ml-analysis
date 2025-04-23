@@ -6,7 +6,7 @@
 
 echo "Starting the training process"
 
-cp -r ./* $TMPDIR/
+rsync -avz --partial --progress ./* $TMPDIR/
 
 cd $TMPDIR
 

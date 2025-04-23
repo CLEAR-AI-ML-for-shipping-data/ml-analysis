@@ -39,8 +39,8 @@ def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
     )
 
     # DataLoaders have batch_size=1, because images have different sizes
-    train_data = DataLoader(train_dataset, batch_size=1, shuffle=True, pin_memory=True)
-    test_data = DataLoader(test_dataset, batch_size=1, shuffle=True, pin_memory=True)
+    train_data = DataLoader(train_dataset, batch_size=32, shuffle=True, pin_memory=True)
+    test_data = DataLoader(test_dataset, batch_size=32, shuffle=True, pin_memory=True)
 
     augmentation_function = torch.nn.Sequential(
         T.RandomHorizontalFlip(),

@@ -12,11 +12,10 @@ from torchvision import transforms as T
 
 from models import CoastalVoyageModel
 from settings import TrainingSettings
-from voyage_dataset import VoyageFilelistDataset
 from voyage_hdf5_dataset import VoyageHDF5Dataset
 
 
-def main(dataset: VoyageFilelistDataset, train_settings: TrainingSettings):
+def main(dataset: VoyageHDF5Dataset, train_settings: TrainingSettings):
 
     start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
     if train_settings.save_name is None:

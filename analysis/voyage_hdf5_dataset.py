@@ -12,9 +12,10 @@ class VoyageHDF5Dataset(BaseDataset):
         filename: name of the HDF5 archive
     """
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, train: bool = True):
         super().__init__()
         self.filename = filename
+        self.train = train
         # Store filenames in attribute to quickly look up filename belonging
         # to a certain index. Otherwise this needs to be done with list
         # comprehension in the __getitem__ method.
@@ -33,9 +34,10 @@ class VoyageHDF5Dataset(BaseDataset):
         image[0] = convolve_image(image[0], kernel_size=3)
         image = torch.from_numpy(image).float()
         image = image[None, :, :, :]
-        images = self.augment_image(image)
+        if self.train is True:
+            return self.augment_image(image)
 
-        return images
+        return image
 
     def augment_image(self, image: torch.Tensor):
         im_e = image

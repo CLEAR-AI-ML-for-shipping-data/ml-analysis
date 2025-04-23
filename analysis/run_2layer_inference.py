@@ -9,7 +9,6 @@ import torch
 # Provide these to the namespace for the read models
 from astromorph.astromorph.src.byol import ByolTrainer
 from astromorph.astromorph.src.datasets import FilelistDataset
-from astromorph.astromorph.src.models import AstroMorphologyModel
 from astromorph.astromorph.src.settings import InferenceSettings
 from loguru import logger
 from skimage.transform import resize
@@ -70,22 +69,22 @@ def main(
     logger.info("Using device {}", device)
 
     # images is a list of tensors with shape (1, 3, width, height)
-    images = [image.to(device) for image in dataset.get_all_items()]
+    # images = [image.to(device) for image in dataset.get_all_items()]
 
     # Loading model
     logger.info(f"Loading pretrained model {model_name}...")
 
-    learner = torch.load(model_name)
+    learner: CoastalVoyageModel = torch.load(model_name)
     learner.eval()
     learner.to(device)
 
     logger.info("Calculating embeddings...")
     with torch.no_grad():
-        dummy_embeddings = learner(images[0])  # , return_embedding=True)
+        dummy_embeddings = learner(dataset[0].to(device))  # , return_embedding=True)
         embeddings_dim = dummy_embeddings.shape[1]
         embeddings = torch.empty((0, embeddings_dim)).to(device)
-        for image in tqdm(images):
-            emb = learner(image)  # , return_embedding=True)
+        for image in tqdm(dataset):
+            emb = learner(image.to(device))  # , return_embedding=True)
             embeddings = torch.cat((embeddings, emb), dim=0)
 
     logger.info("Clustering embeddings...")
@@ -200,6 +199,6 @@ if __name__ == "__main__":
     settings.export_to_csv = True
 
     logger.info("Reading data")
-    dataset = VoyageHDF5Dataset(settings.datafile, **(settings.data_settings))
+    dataset = VoyageHDF5Dataset(settings.datafile, train=False, **(settings.data_settings))
 
     main(dataset, settings.trained_network_name, settings.export_to_csv, make_thumbnails=False)

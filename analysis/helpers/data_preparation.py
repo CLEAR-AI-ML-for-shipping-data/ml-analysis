@@ -152,8 +152,6 @@ def voyage_array_from_points(
                 [image, np.zeros((1, resolution, resolution))],
                 axis=0,
             )
-    # Check array dimensions before exporting
-    # assert image.shape == (len(coastlines) + 1, resolution, resolution)
 
     # Export each individual array
     if filename is not None:
@@ -335,8 +333,6 @@ def main(
     )
     df_box = gpd.GeoDataFrame([{"geometry": df_box}], crs="EPSG:4326")
 
-    # coastlines = gpd.read_file(coastline_file)
-    # coastlines = coastlines.overlay(df_box, how="intersection")
     coastlines = []
     for file in coastline_file:
         coastlines.append(load_external_geo_data(file, bounding_box=df_box))

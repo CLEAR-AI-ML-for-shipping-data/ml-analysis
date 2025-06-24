@@ -1,7 +1,7 @@
 import argparse
 import math
 from time import perf_counter
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import geopandas as gpd
 import pandas as pd
@@ -11,11 +11,7 @@ from shapely.geometry import box
 from sqlalchemy import create_engine, text
 from tqdm import tqdm, trange
 
-from prepare_2layer_data import (
-    load_external_geo_data,
-    time_windowing,
-    voyage_array_from_points,
-)
+from helpers import data_preparation as dataprep
 
 POSTGRES_DB = "gis"
 POSTGRES_USER = "clear"
@@ -37,6 +33,8 @@ def process_gdf_chunk(
     timestamp_col: str = "timestamps",
     external_geoms: List[gpd.GeoDataFrame] = [],
     conv_kernel_size: int = 1,
+    heading_col: Optional[str] = None,
+    cog_col: Optional[str] = None,
 ):
     for row_nr in trange(df.shape[0], leave=False):
         # image = voyage_array_from_points(
@@ -56,12 +54,20 @@ def process_gdf_chunk(
             crs="EPSG:4326",
         )
 
-        time_windowing(
+        drift_col = None
+        if heading_col is not None and cog_col is not None:
+            drift_col = "drift"
+            data[heading_col] = voyage_data[heading_col]
+            data[cog_col] = voyage_data[cog_col]
+            data[drift_col] = ((data[cog_col] - data[heading_col] + 180) % 360) - 180
+
+        dataprep.time_windowing(
             dataf=data,
             coastlines=external_geoms,
             zipfile=hdf5_filename,
             prefix=voyage_data[ship_id_col],
             export_dir=None,
+            value_cols=drift_col,
         )
 
         # image[0] = convolve_image(image[0], kernel_size=conv_kernel_size)
@@ -105,7 +111,7 @@ def main(
     t0 = perf_counter()
     for geometry_file in geometries:
         logger.info(f"Loading {geometry_file}")
-        external_dfs.append(load_external_geo_data(geometry_file))
+        external_dfs.append(dataprep.load_external_geo_data(geometry_file))
     t1 = perf_counter()
 
     logger.debug(f"Loaded external geometries in {int((t1-t0)*1_000):d}ms")
@@ -125,12 +131,12 @@ def main(
     #   [...]
     # ]
 
-    segment_table = "trajectories_2023_01"
+    segment_table = "trajectories_2023_02"
 
     ship_id_col = "mmsi"
     coord_col = "coordinates"
 
-    select_boxed_segments = f"SELECT {ship_id_col}, start_dt, end_dt, timestamps, {coord_col}, ST_Envelope({coord_col}) AS voyage_envelope FROM {segment_table}"
+    select_boxed_segments = f"SELECT {ship_id_col}, start_dt, end_dt, timestamps, heading, course_over_ground, {coord_col}, ST_Envelope({coord_col}) AS voyage_envelope FROM {segment_table}"
 
     select_string = "SELECT boxed.*"
 
@@ -194,7 +200,17 @@ def main(
                 cut_external_dfs = []
             # logger.info(f"Processing chunk {i} ({df.shape[0]} rows)")
             # logger.info(f"{df.columns}")
-            tdf = df[[ship_id_col, "start_dt", "end_dt", coord_col, "timestamps"]]
+            tdf = df[
+                [
+                    ship_id_col,
+                    "start_dt",
+                    "end_dt",
+                    coord_col,
+                    "timestamps",
+                    "heading",
+                    "course_over_ground",
+                ]
+            ]
             external_db_dfs = [
                 df[geom_columns].set_geometry(geom_columns[0], crs="EPSG:4326")
                 for geom_columns in geom_columns_list
@@ -207,6 +223,8 @@ def main(
                 conv_kernel_size=5,
                 ship_id_col=ship_id_col,
                 geom_col=coord_col,
+                heading_col="heading",
+                cog_col="course_over_ground",
             )
 
 

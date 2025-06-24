@@ -11,8 +11,8 @@ from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import transforms as T
 
 from models import CoastalVoyageModel
-from settings import TrainingSettings
-from voyage_hdf5_dataset import VoyageHDF5Dataset
+from helpers.settings import TrainingSettings
+from datasets.voyage_hdf5_dataset import VoyageHDF5Dataset
 
 
 def main(dataset: VoyageHDF5Dataset, train_settings: TrainingSettings):

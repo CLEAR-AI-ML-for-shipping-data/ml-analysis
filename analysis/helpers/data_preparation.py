@@ -11,9 +11,47 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from rasterio.features import rasterize
-from rasterio.transform import from_bounds
+from rasterio.transform import Affine, from_bounds
 from shapely.geometry import LineString, Point, box
 from tqdm import tqdm
+
+
+def get_segmented_value_trace(
+    dataf: gpd.GeoDataFrame,
+    value_column: str,
+    resolution: int,
+    transform: Affine,
+    dtype: np.dtype,
+) -> np.ndarray:
+    """Create line segments with scalar variable pixel values.
+
+    This can be used to add extra values to an image, where those values change during
+    a trajectory, such as drift.
+
+    Args:
+        dataf: dataframe
+        value_column: column name that contains the scalar value
+        resolution: size of the output image
+        transform: an affine transformation, necessary for rasterization
+        dtype: datatype of the pixels
+
+    Returns:
+        a 1 x <resolution> x <resolution> image layer
+    """
+    line_value_pairs = []
+    geom_coords = dataf.geometry
+    for i in range(1, dataf.shape[0]):
+        segment = LineString([geom_coords.iloc[i - 1], geom_coords.iloc[i]])
+        value = dataf[value_column].iloc[i]
+        line_value_pairs.append((segment, value))
+
+    image = rasterize(
+        line_value_pairs,
+        out_shape=(resolution, resolution),
+        transform=transform,
+        dtype=dtype,
+    )
+    return np.expand_dims(image, axis=0)
 
 
 def voyage_array_from_points(
@@ -22,7 +60,8 @@ def voyage_array_from_points(
     resolution: int = 256,
     dtype: np.dtype = np.float32,
     filename: str = None,
-    convert_from_points: bool = True
+    convert_from_points: bool = True,
+    value_cols: Optional[Union[str, List[str]]] = None,
 ):
     """Create a rasterized voyage array from a collection of coordinates.
 
@@ -73,6 +112,24 @@ def voyage_array_from_points(
     # Make the image the first channel in an (optionally) multichannel image
     image = np.expand_dims(image, axis=0)
 
+    # Add traces where the pixel value of the line corresponds to some variable
+    if value_cols is not None and isinstance(value_cols, str):
+        value_cols = [
+            value_cols,
+        ]
+    else:
+        value_cols = []
+
+    for value_column in value_cols:
+        extra_layer = get_segmented_value_trace(
+            dataf=data,
+            value_column=value_column,
+            resolution=resolution,
+            transform=transform,
+            dtype=dtype,
+        )
+        image = np.concat([image, extra_layer], axis=0)
+
     # Add coastline geometries to the trajectory
     for coastline in coastlines:
         try:
@@ -95,8 +152,6 @@ def voyage_array_from_points(
                 [image, np.zeros((1, resolution, resolution))],
                 axis=0,
             )
-    # Check array dimensions before exporting
-    assert image.shape == (len(coastlines) + 1, resolution, resolution)
 
     # Export each individual array
     if filename is not None:
@@ -113,6 +168,7 @@ def time_windowing(
     prefix: str = None,
     export_dir: str = ".",
     zipfile: str = None,
+    value_cols: Optional[Union[str, List[str]]] = None,
 ):
     """Create time-windowed snapshots of the voyage, and rasterize the snapshots.
 
@@ -153,9 +209,7 @@ def time_windowing(
         # We cannot say anything about a trajectory that is just 2 points
         if data.shape[0] > 2:
             image = voyage_array_from_points(
-                data,
-                coastlines=coastlines,
-                filename=filename,
+                data, coastlines=coastlines, filename=filename, value_cols=value_cols
             )
 
         if image is not None:
@@ -279,8 +333,6 @@ def main(
     )
     df_box = gpd.GeoDataFrame([{"geometry": df_box}], crs="EPSG:4326")
 
-    # coastlines = gpd.read_file(coastline_file)
-    # coastlines = coastlines.overlay(df_box, how="intersection")
     coastlines = []
     for file in coastline_file:
         coastlines.append(load_external_geo_data(file, bounding_box=df_box))

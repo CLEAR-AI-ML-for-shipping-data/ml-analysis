@@ -19,8 +19,8 @@ from torchvision import transforms as T
 from tqdm import tqdm
 
 from models import CoastalVoyageModel
-from voyage_dataset import VoyageDataset, VoyageFilelistDataset
-from voyage_hdf5_dataset import VoyageHDF5Dataset
+from datasets.voyage_dataset import VoyageDataset, VoyageFilelistDataset
+from datasets.voyage_hdf5_dataset import VoyageHDF5Dataset
 
 
 def normalize_image(image: torch.Tensor):

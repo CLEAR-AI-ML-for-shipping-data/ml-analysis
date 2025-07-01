@@ -1,7 +1,7 @@
 import h5py
 import torch
 
-from astromorph.astromorph.src.datasets.base_dataset import BaseDataset
+from astromorph.datasets.base_dataset import BaseDataset
 from .helpers import convolve_image
 
 

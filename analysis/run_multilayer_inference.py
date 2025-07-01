@@ -7,9 +7,9 @@ import pandas as pd
 import torch
 
 # Provide these to the namespace for the read models
-from astromorph.astromorph.src.byol import ByolTrainer
-from astromorph.astromorph.src.datasets import FilelistDataset
-from astromorph.astromorph.src.settings import InferenceSettings
+from astromorph import ByolTrainer
+from astromorph.datasets import FitsFilelistDataset
+from astromorph.settings import InferenceSettings
 from loguru import logger
 from skimage.transform import resize
 from sklearn import cluster
@@ -48,7 +48,7 @@ def create_thumbnail(image: torch.Tensor, thumbnail_size: int):
 
 
 def main(
-    dataset: FilelistDataset,
+    dataset: VoyageHDF5Dataset,
     model_name: str,
     export_embeddings: bool = False,
     make_thumbnails: bool = True
@@ -96,7 +96,7 @@ def main(
     writer = SummaryWriter(log_dir=f"runs/{model_basename}/")
 
     # If the data is stored in FITS files, retrieve extra metadata
-    if isinstance(dataset, FilelistDataset):
+    if isinstance(dataset, FitsFilelistDataset):
         # Retrieve object name, RA, dec, rest frequency, and the filename
         names = dataset.get_object_property("OBJECT")
         right_ascension = dataset.get_object_property("OBSRA")

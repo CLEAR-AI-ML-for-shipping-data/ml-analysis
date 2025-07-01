@@ -4,7 +4,7 @@ import pprint
 import toml
 
 import torch
-from astromorph.astromorph.src.byol import ByolTrainer, MinMaxNorm
+from astromorph import ByolTrainer, MinMaxNorm
 from loguru import logger
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ExponentialLR

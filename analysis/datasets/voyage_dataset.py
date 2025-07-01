@@ -3,8 +3,8 @@ from typing import List
 
 import numpy as np
 import torch
-from astromorph.astromorph.src.datasets.base_dataset import BaseDataset
-from astromorph.astromorph.src.datasets.helpers import augment_image, make_4D
+from astromorph.datasets.base_dataset import BaseDataset
+from astromorph.datasets.helpers import augment_image, make_4D
 
 
 class VoyageDataset(BaseDataset):

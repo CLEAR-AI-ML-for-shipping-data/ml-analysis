@@ -59,7 +59,9 @@ def process_gdf_chunk(
             drift_col = "drift"
             data[heading_col] = voyage_data[heading_col]
             data[cog_col] = voyage_data[cog_col]
-            data[drift_col] = ((data[cog_col] - data[heading_col] + 180) % 360) - 180
+            data[drift_col] = (
+                0.5 + (((data[cog_col] - data[heading_col] + 180) % 360) - 180) / 360
+            )
 
         dataprep.time_windowing(
             dataf=data,

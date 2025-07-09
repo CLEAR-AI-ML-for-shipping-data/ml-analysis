@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import Dict, List, Optional
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from loguru import logger
 from shapely import points
@@ -60,7 +61,11 @@ def process_gdf_chunk(
             data[heading_col] = voyage_data[heading_col]
             data[cog_col] = voyage_data[cog_col]
             data[drift_col] = (
-                0.5 + (((data[cog_col] - data[heading_col] + 180) % 360) - 180) / 360
+                # 0.5 + (((data[cog_col] - data[heading_col] + 180) % 360) - 180) / 360
+                np.abs(data[cog_col] - data[heading_col])
+            )
+            data[drift_col] = data[drift_col].apply(
+                lambda x: x / 180 if x <= 180 else (360 - x) / 180
             )
 
         dataprep.time_windowing(

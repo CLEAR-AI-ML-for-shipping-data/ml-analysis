@@ -74,7 +74,7 @@ def main(
     # Loading model
     logger.info(f"Loading pretrained model {model_name}...")
 
-    learner: CoastalVoyageModel = torch.load(model_name)
+    learner: CoastalVoyageModel = torch.load(model_name, weights_only=False)
     learner.eval()
     learner.to(device)
 
@@ -200,5 +200,6 @@ if __name__ == "__main__":
 
     logger.info("Reading data")
     dataset = VoyageHDF5Dataset(settings.datafile, train=False, **(settings.data_settings))
+    torch.serialization.add_safe_globals([ByolTrainer])
 
     main(dataset, settings.trained_network_name, settings.export_to_csv, make_thumbnails=False)

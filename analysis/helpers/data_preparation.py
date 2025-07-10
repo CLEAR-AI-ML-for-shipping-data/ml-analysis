@@ -3,7 +3,9 @@ import datetime as dt
 import os
 import pickle
 import pprint
-from typing import List, Optional, Union
+from typing import List
+from typing import Optional
+from typing import Union
 
 import geopandas as gpd
 import h5py
@@ -11,8 +13,11 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from rasterio.features import rasterize
-from rasterio.transform import Affine, from_bounds
-from shapely.geometry import LineString, Point, box
+from rasterio.transform import Affine
+from rasterio.transform import from_bounds
+from shapely.geometry import box
+from shapely.geometry import LineString
+from shapely.geometry import Point
 from tqdm import tqdm
 
 
@@ -59,7 +64,7 @@ def voyage_array_from_points(
     coastlines: List[gpd.GeoDataFrame] = [],
     resolution: int = 256,
     dtype: np.dtype = np.float32,
-    filename: str = None,
+    filename: Optional[str] = None,
     convert_from_points: bool = True,
     value_cols: Optional[Union[str, List[str]]] = None,
 ):
@@ -96,7 +101,8 @@ def voyage_array_from_points(
     # Create a line from the coordinates, and rasterize the line
     if convert_from_points is True:
         travel_line = gpd.GeoDataFrame(
-            [{"geometry": LineString(data.geometry)}], crs="EPSG:4326"
+            [{"geometry": LineString(data.geometry)}],
+            crs="EPSG:4326",
         )
     else:
         travel_line = data
@@ -165,9 +171,9 @@ def time_windowing(
     window_size: str = "4h",
     step_size: str = "2h",
     coastlines: List[gpd.GeoDataFrame] = [],
-    prefix: str = None,
-    export_dir: str = ".",
-    zipfile: str = None,
+    prefix: Optional[str] = None,
+    export_dir: Union[str, None] = ".",
+    zipfile: Optional[str] = None,
     value_cols: Optional[Union[str, List[str]]] = None,
 ):
     """Create time-windowed snapshots of the voyage, and rasterize the snapshots.
@@ -188,13 +194,17 @@ def time_windowing(
     # convert window and step to pandas Timedelta
     window_size = pd.Timedelta(window_size)
     step_size = pd.Timedelta(step_size)
-    timesteps = pd.date_range(start=df_index[0], end=df_index[-1], freq=step_size)
+    timesteps = pd.date_range(
+        start=df_index[0],
+        end=df_index[-1],
+        freq=step_size,
+    )
 
     # Rasterize each snapshot of the voyage
     images: List[np.ndarray] = []
     for start_time in timesteps:
         image = None
-        data = dataf.loc[start_time : start_time + window_size]
+        data = dataf.loc[start_time: start_time + window_size]
 
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
@@ -209,7 +219,10 @@ def time_windowing(
         # We cannot say anything about a trajectory that is just 2 points
         if data.shape[0] > 2:
             image = voyage_array_from_points(
-                data, coastlines=coastlines, filename=filename, value_cols=value_cols
+                data,
+                coastlines=coastlines,
+                filename=filename,
+                value_cols=value_cols,
             )
 
         if image is not None:
@@ -278,7 +291,9 @@ def convert_dataframe(
     return images
 
 
-def load_external_geo_data(file: str, bounding_box: Optional[gpd.GeoDataFrame] = None):
+def load_external_geo_data(
+    file: str, bounding_box: Optional[gpd.GeoDataFrame] = None,
+):
     gdf = gpd.read_file(file)
     if bounding_box is not None:
         gdf = gdf.overlay(bounding_box, how="intersection")
@@ -287,7 +302,7 @@ def load_external_geo_data(file: str, bounding_box: Optional[gpd.GeoDataFrame] =
 
 def main(
     trajectory_file: str,
-    coastline_file: str,
+    coastline_file: List[str],
     window: str = "4h",
     step: str = "2h",
     timestamp: Optional[str] = None,
@@ -334,8 +349,12 @@ def main(
     df_box = gpd.GeoDataFrame([{"geometry": df_box}], crs="EPSG:4326")
 
     coastlines = []
-    for file in coastline_file:
-        coastlines.append(load_external_geo_data(file, bounding_box=df_box))
+    for filename in coastline_file:
+        coastlines.append(
+            load_external_geo_data(
+                filename, bounding_box=df_box,
+            ),
+        )
 
     convert_dataframe(
         df,
@@ -348,11 +367,16 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="CLEAR data preparation", description=None, epilog=None
+        prog="CLEAR data preparation",
+        description=None,
+        epilog=None,
     )
 
     parser.add_argument(
-        "-d", "--datafile", help="Specify a trajectory file", required=True
+        "-d",
+        "--datafile",
+        help="Specify a trajectory file",
+        required=True,
     )
     parser.add_argument(
         "-g",
@@ -361,9 +385,24 @@ if __name__ == "__main__":
         nargs="*",
         default=[],
     )
-    parser.add_argument("-w", "--window", help="Specify a time window", default="4h")
-    parser.add_argument("-s", "--step", help="Specify a time step", default="2h")
-    parser.add_argument("-x", "--hdf5", help="HDF5 archive to export to", default=None)
+    parser.add_argument(
+        "-w",
+        "--window",
+        help="Specify a time window",
+        default="4h",
+    )
+    parser.add_argument(
+        "-s",
+        "--step",
+        help="Specify a time step",
+        default="2h",
+    )
+    parser.add_argument(
+        "-x",
+        "--hdf5",
+        help="HDF5 archive to export to",
+        default=None,
+    )
 
     starttime = dt.datetime.now().strftime("%Y%m%d_%H%M")
     logfile = f"logs/preparation_{starttime}.log"
@@ -374,7 +413,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.info(
-        "Starting data preparation with settings:\n{}", pprint.pformat(vars(args))
+        "Starting data preparation with settings:\n{}",
+        pprint.pformat(
+            vars(args),
+        ),
     )
 
     main(

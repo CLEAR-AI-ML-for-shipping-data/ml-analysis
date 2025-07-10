@@ -32,4 +32,3 @@ cp *.pt $SLURM_SUBMIT_DIR/saved_models/
 cp -r runs/* $SLURM_SUBMIT_DIR/runs/
 
 echo "Finito"
-

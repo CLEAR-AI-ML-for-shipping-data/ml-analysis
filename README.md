@@ -18,4 +18,3 @@ We train the neural network with `analysis/train_2layer_model.py`.
 It is important to supply a configfile that follows the conventions from `analysis/example_config.toml`
 
 ## Calculate the embeddings
-

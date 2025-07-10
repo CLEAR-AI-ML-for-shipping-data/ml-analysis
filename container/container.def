@@ -13,4 +13,3 @@ From: /apps/containers/PyTorch/PyTorch-2.5.0-NGC-24.09.sif
 
 %runscript
     python3 /opt/clear-analysis/train_2layer_model.py $@
- 

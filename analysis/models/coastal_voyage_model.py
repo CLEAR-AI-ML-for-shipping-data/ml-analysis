@@ -22,7 +22,9 @@ class CoastalVoyageModel(nn.Module):
         )
         self.bn1 = nn.BatchNorm2d(dim_1, eps=1e-5)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1)
+        self.maxpool = nn.MaxPool2d(
+            kernel_size=3, stride=2, padding=1, dilation=1,
+        )
 
         self.layer1 = nn.Sequential(
             nn.Conv2d(dim_1, dim_2, kernel_size=3, stride=1, padding=1),

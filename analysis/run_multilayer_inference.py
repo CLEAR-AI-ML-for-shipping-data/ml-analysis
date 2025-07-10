@@ -5,22 +5,17 @@ import tomllib
 import numpy as np
 import pandas as pd
 import torch
-
-# Provide these to the namespace for the read models
 from astromorph import ByolTrainer
 from astromorph.datasets import FitsFilelistDataset
 from astromorph.settings import InferenceSettings
 from loguru import logger
 from skimage.transform import resize
 from sklearn import cluster
-from torch import nn
 from torch.utils.tensorboard import SummaryWriter
-from torchvision import transforms as T
 from tqdm import tqdm
 
+from datasets import VoyageHDF5Dataset
 from models import CoastalVoyageModel
-from datasets.voyage_dataset import VoyageDataset, VoyageFilelistDataset
-from datasets.voyage_hdf5_dataset import VoyageHDF5Dataset
 
 
 def normalize_image(image: torch.Tensor):
@@ -51,7 +46,7 @@ def main(
     dataset: VoyageHDF5Dataset,
     model_name: str,
     export_embeddings: bool = False,
-    make_thumbnails: bool = True
+    make_thumbnails: bool = True,
 ):
     """Run the inference.
 
@@ -80,7 +75,8 @@ def main(
 
     logger.info("Calculating embeddings...")
     with torch.no_grad():
-        dummy_embeddings = learner(dataset[0].to(device))  # , return_embedding=True)
+        # , return_embedding=True)
+        dummy_embeddings = learner(dataset[0].to(device))
         embeddings_dim = dummy_embeddings.shape[1]
         embeddings = torch.empty((0, embeddings_dim)).to(device)
         for image in tqdm(dataset):
@@ -111,7 +107,7 @@ def main(
                 declination,
                 rest_freq,
                 filenames,
-            )
+            ),
         )
 
         headers = [
@@ -127,8 +123,8 @@ def main(
         labels = list(
             zip(
                 cluster_labels,
-                dataset.filenames
-            )
+                dataset.filenames,
+            ),
         )
 
         headers = ["cluster", "filename"]
@@ -136,19 +132,27 @@ def main(
     # Make thumbnails to show in TensorBoard
     if make_thumbnails:
         logger.info("Producing thumbnails...")
-        plot_images = [normalize_image(image.cpu()) for image in dataset.get_all_items()]
+        plot_images = [
+            normalize_image(image.cpu()) for image in dataset.get_all_items()
+        ]
 
         # If thumbnails are too large, TensorBoard runs out of memory
         thumbnail_size = 81
         thumbnail_size = 39
         thumbnail_size = 215
 
-        resized = [create_thumbnail(image, thumbnail_size) for image in plot_images]
+        resized = [
+            create_thumbnail(image, thumbnail_size)
+            for image in plot_images
+        ]
 
         # Concatenate thumbnails into a single tensor for labelling the embeddings
         all_ims = torch.cat(resized)
         writer.add_embedding(
-            embeddings, label_img=all_ims, metadata=labels, metadata_header=headers
+            embeddings,
+            label_img=all_ims,
+            metadata=labels,
+            metadata_header=headers,
         )
 
     if export_embeddings:
@@ -160,8 +164,13 @@ def main(
             headers = ["cluster_label"]
             labels = [[label] for label in cluster_labels]
 
-        embedding_columns = [f"emb_dim_{i}" for i in range(embeddings.shape[1])]
-        df_embeddings = pd.DataFrame(columns=embedding_columns, data=embeddings.cpu())
+        embedding_columns = [
+            f"emb_dim_{i}" for i in range(embeddings.shape[1])
+        ]
+        df_embeddings = pd.DataFrame(
+            columns=embedding_columns,
+            data=embeddings.cpu(),
+        )
         df_metadata = pd.DataFrame(columns=headers, data=labels)
         df_export = pd.concat([df_metadata, df_embeddings], axis=1)
         df_export.to_csv(f"exported/{model_basename}.csv", sep=";")
@@ -171,11 +180,17 @@ if __name__ == "__main__":
     # Options can either be provided by command line arguments, or a config file
     # Options from the command line will override those from the config file
     parser = argparse.ArgumentParser(
-        prog="Astromorph pipeline", description=None, epilog=None
+        prog="Astromorph pipeline",
+        description=None,
+        epilog=None,
     )
     parser.add_argument("-d", "--datafile", help="Define a data file")
     parser.add_argument("-m", "--maskfile", help="Specify a mask file")
-    parser.add_argument("-n", "--trained_network_name", help="Saved network model")
+    parser.add_argument(
+        "-n",
+        "--trained_network_name",
+        help="Saved network model",
+    )
     parser.add_argument("-c", "--configfile", help="Specify a config file")
     args = parser.parse_args()
 
@@ -199,7 +214,16 @@ if __name__ == "__main__":
     settings.export_to_csv = True
 
     logger.info("Reading data")
-    dataset = VoyageHDF5Dataset(settings.datafile, train=False, **(settings.data_settings))
+    dataset = VoyageHDF5Dataset(
+        settings.datafile,
+        train=False,
+        **(settings.data_settings),
+    )
     torch.serialization.add_safe_globals([ByolTrainer])
 
-    main(dataset, settings.trained_network_name, settings.export_to_csv, make_thumbnails=False)
+    main(
+        dataset,
+        settings.trained_network_name,
+        settings.export_to_csv,
+        make_thumbnails=False,
+    )

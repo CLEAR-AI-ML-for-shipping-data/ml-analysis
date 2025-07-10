@@ -1,18 +1,19 @@
 import argparse
 import datetime as dt
 import pprint
-import toml
 
+import toml
 import torch
-from astromorph import ByolTrainer, MinMaxNorm
+from astromorph import ByolTrainer
+from astromorph import MinMaxNorm
 from loguru import logger
-from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ExponentialLR
+from torch.utils.data import DataLoader
 from torchvision import transforms as T
 
-from models import CoastalVoyageModel
-from helpers.settings import TrainingSettings
 from datasets.voyage_hdf5_dataset import VoyageHDF5Dataset
+from helpers.settings import TrainingSettings
+from models import CoastalVoyageModel
 
 
 def main(dataset: VoyageHDF5Dataset, train_settings: TrainingSettings):
@@ -34,12 +35,18 @@ def main(dataset: VoyageHDF5Dataset, train_settings: TrainingSettings):
 
     rng = torch.Generator().manual_seed(42)  # seeded RNG for reproducibility
     train_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, [0.8, 0.2], generator=rng
+        dataset, [0.8, 0.2], generator=rng,
     )
 
     # DataLoaders have batch_size=1, because images have different sizes
-    train_data = DataLoader(train_dataset, batch_size=32, shuffle=True, pin_memory=True)
-    test_data = DataLoader(test_dataset, batch_size=32, shuffle=True, pin_memory=True)
+    train_data = DataLoader(
+        train_dataset, batch_size=32,
+        shuffle=True, pin_memory=True,
+    )
+    test_data = DataLoader(
+        test_dataset, batch_size=32,
+        shuffle=True, pin_memory=True,
+    )
 
     augmentation_function = torch.nn.Sequential(
         T.RandomHorizontalFlip(),
@@ -80,20 +87,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="CLEAR training script")
 
     parser.add_argument(
-        "-c", "--configfile", help="Specify a configfile", required=True
+        "-c", "--configfile", help="Specify a configfile", required=True,
     )
     parser.add_argument(
-        "-d", "--datafile", help="Specify a data file (HDF5 archive)"
+        "-d", "--datafile", help="Specify a data file (HDF5 archive)",
     )
     parser.add_argument(
-        "-l", "--learning-rate", help="Learning rate", type=float
+        "-l", "--learning-rate", help="Learning rate", type=float,
     )
     parser.add_argument(
-        "-b", "--batch-size", help="Batch size", type=int
+        "-b", "--batch-size", help="Batch size", type=int,
     )
     parser.add_argument(
         "-n", "--save-name", help="Model reference name, used in logs and save files",
-        type=str
+        type=str,
     )
 
     args = parser.parse_args()

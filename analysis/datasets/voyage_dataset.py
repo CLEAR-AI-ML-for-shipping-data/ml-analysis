@@ -1,10 +1,12 @@
 import pickle
 from typing import List
+from typing import Union
 
 import numpy as np
 import torch
 from astromorph.datasets.base_dataset import BaseDataset
-from astromorph.datasets.helpers import augment_image, make_4D
+from astromorph.datasets.helpers import augment_image
+from astromorph.datasets.helpers import make_4D
 
 
 class VoyageDataset(BaseDataset):
@@ -34,15 +36,19 @@ class VoyageFilelistDataset(BaseDataset):
     This way you can load distributed image data into a model or DataLoader.
 
     """
-    def __init__(self, filelist: str):
+
+    def __init__(self, filelist: Union[str, List[str]]):
         super().__init__()
-        self.input_file: str = filelist
+        self.input_file = filelist
         if isinstance(filelist, list):
-            self.filenames = filelist
+            self.filenames: List[str] = filelist
         else:
             with open(filelist, "r") as file:
                 # Make sure to remove the newline characters at the end of each filename
-                self.filenames = [fname.strip("\n") for fname in file.readlines()]
+                self.filenames = [
+                    fname.strip("\n")
+                    for fname in file.readlines()
+                ]
 
     def __len__(self):
         return len(self.filenames)

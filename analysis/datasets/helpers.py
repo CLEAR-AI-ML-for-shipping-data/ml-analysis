@@ -7,7 +7,7 @@ def convolve_image(image: np.ndarray, kernel_size=5):
     if image.ndim == 3:
         for i in range(image.shape[-1]):
             image[:, :, i] = convolve(
-                image[:, :, i], image_kernel, mode="same", method="direct"
+                image[:, :, i], image_kernel, mode="same", method="direct",
             )
     else:
         image = convolve(image, image_kernel, mode="same", method="direct")

@@ -1,0 +1,39 @@
+[project]
+name = "clear-ml-analysis"
+version = "0.0.0a"
+description = "Computer vision analysis of ship trajectories"
+readme = "README.md"
+authors = [{ name = "Leon Boschman", email = "leon.boschman@chalmers.se" }]
+requires-python = ">=3.12"
+dependencies = [
+  "geopandas>=1.0.1",
+  "h5py>=3.12.1",
+  "loguru>=0.7.2",
+  "numpy>=2.2.2",
+  "pandas>=2.2.3",
+  "psycopg-binary>=2.9.10",
+  "pydantic>=2.10.6",
+  "rasterio>=1.4.2",
+  "scikit-learn>=1.6.1",
+  "Shapely>=2.0.6",
+  "scikit-image>=0.0",
+  "SQLAlchemy>=2.0.37",
+  "toml>=0.10.2",
+  "torch>=2.5.0",
+  "torchvision>=0.20.0",
+  "tqdm>=4.66.5",
+]
+
+[project.optional-dependencies]
+dev = ["pre-commit"]
+
+[project.urls]
+Homepage = "https://github.com/CLEAR-AI-ML-for-shipping-data/ml-analysis"
+Issues = "https://github.com/CLEAR-AI-ML-for-shipping-data/ml-analysis/issues"
+
+
+[tool.isort]
+src_paths = ["analysis"]
+
+[tool.setuptools]
+packages = ["analysis"]

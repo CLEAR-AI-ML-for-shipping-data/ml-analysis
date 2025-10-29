@@ -3,9 +3,7 @@ import datetime as dt
 import os
 import pickle
 import pprint
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import List, Optional, Union
 
 import geopandas as gpd
 import h5py
@@ -13,11 +11,8 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from rasterio.features import rasterize
-from rasterio.transform import Affine
-from rasterio.transform import from_bounds
-from shapely.geometry import box
-from shapely.geometry import LineString
-from shapely.geometry import Point
+from rasterio.transform import Affine, from_bounds
+from shapely.geometry import LineString, Point, box
 from tqdm import tqdm
 
 
@@ -204,7 +199,7 @@ def time_windowing(
     images: List[np.ndarray] = []
     for start_time in timesteps:
         image = None
-        data = dataf.loc[start_time: start_time + window_size]
+        data = dataf.loc[start_time : start_time + window_size]
 
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
@@ -291,9 +286,7 @@ def convert_dataframe(
     return images
 
 
-def load_external_geo_data(
-    file: str, bounding_box: Optional[gpd.GeoDataFrame] = None,
-):
+def load_external_geo_data(file: str, bounding_box: Optional[gpd.GeoDataFrame] = None):
     gdf = gpd.read_file(file)
     if bounding_box is not None:
         gdf = gdf.overlay(bounding_box, how="intersection")
@@ -351,9 +344,7 @@ def main(
     coastlines = []
     for filename in coastline_file:
         coastlines.append(
-            load_external_geo_data(
-                filename, bounding_box=df_box,
-            ),
+            load_external_geo_data(filename, bounding_box=df_box),
         )
 
     convert_dataframe(

@@ -17,7 +17,6 @@ from models import CoastalVoyageModel
 
 
 def main(dataset: VoyageHDF5Dataset, train_settings: TrainingSettings):
-
     start_time = dt.datetime.now().strftime("%Y%m%d_%H%M")
     if train_settings.save_name is None:
         train_settings.save_name = start_time
@@ -35,17 +34,23 @@ def main(dataset: VoyageHDF5Dataset, train_settings: TrainingSettings):
 
     rng = torch.Generator().manual_seed(42)  # seeded RNG for reproducibility
     train_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, [0.8, 0.2], generator=rng,
+        dataset,
+        [0.8, 0.2],
+        generator=rng,
     )
 
     # DataLoaders have batch_size=1, because images have different sizes
     train_data = DataLoader(
-        train_dataset, batch_size=32,
-        shuffle=True, pin_memory=True,
+        train_dataset,
+        batch_size=32,
+        shuffle=True,
+        pin_memory=True,
     )
     test_data = DataLoader(
-        test_dataset, batch_size=32,
-        shuffle=True, pin_memory=True,
+        test_dataset,
+        batch_size=32,
+        shuffle=True,
+        pin_memory=True,
     )
 
     augmentation_function = torch.nn.Sequential(
@@ -87,19 +92,32 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="CLEAR training script")
 
     parser.add_argument(
-        "-c", "--configfile", help="Specify a configfile", required=True,
+        "-c",
+        "--configfile",
+        help="Specify a configfile",
+        required=True,
     )
     parser.add_argument(
-        "-d", "--datafile", help="Specify a data file (HDF5 archive)",
+        "-d",
+        "--datafile",
+        help="Specify a data file (HDF5 archive)",
     )
     parser.add_argument(
-        "-l", "--learning-rate", help="Learning rate", type=float,
+        "-l",
+        "--learning-rate",
+        help="Learning rate",
+        type=float,
     )
     parser.add_argument(
-        "-b", "--batch-size", help="Batch size", type=int,
+        "-b",
+        "--batch-size",
+        help="Batch size",
+        type=int,
     )
     parser.add_argument(
-        "-n", "--save-name", help="Model reference name, used in logs and save files",
+        "-n",
+        "--save-name",
+        help="Model reference name, used in logs and save files",
         type=str,
     )
 

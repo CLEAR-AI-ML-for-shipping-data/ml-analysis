@@ -1,19 +1,15 @@
 import argparse
 import math
 from time import perf_counter
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 
 import geopandas as gpd
 import pandas as pd
 from loguru import logger
 from shapely import points
 from shapely.geometry import box
-from sqlalchemy import create_engine
-from sqlalchemy import text
-from tqdm import tqdm
-from tqdm import trange
+from sqlalchemy import create_engine, text
+from tqdm import tqdm, trange
 
 from helpers import data_preparation as dataprep
 
@@ -64,9 +60,7 @@ def process_gdf_chunk(
             drift_col = ["drift"]
             data[heading_col] = voyage_data[heading_col]
             data[cog_col] = voyage_data[cog_col]
-            data[drift_col] = (
-                (data[cog_col] - data[heading_col] + 180) % 360
-            ) - 180
+            data[drift_col] = ((data[cog_col] - data[heading_col] + 180) % 360) - 180
 
         if scalar_value_cols is not None:
             for column in scalar_value_cols:
@@ -155,8 +149,7 @@ def main(
     scalar_value_cols = [
         "u10",
     ]  # , "v10", "mwd", "mwp", "swh"]
-    svc_string = ", " + \
-        svc if len(svc := ", ".join(scalar_value_cols)) > 0 else ""
+    svc_string = ", " + svc if len(svc := ", ".join(scalar_value_cols)) > 0 else ""
 
     select_boxed_segments = (
         f"SELECT {ship_id_col}, start_dt, end_dt, timestamps, heading, "
@@ -195,7 +188,6 @@ def main(
     query_string = f"{select_string} {from_string} {where_string} "
 
     with engine.connect() as conn:
-
         total_rows = conn.execute(
             text(f"select count(*) {from_string} {where_string}"),
         ).scalar()
@@ -241,7 +233,8 @@ def main(
                     "timestamps",
                     "heading",
                     "course_over_ground",
-                ] + scalar_value_cols
+                ]
+                + scalar_value_cols
             ]
             external_db_dfs = [
                 df[geom_columns].set_geometry(geom_columns[0], crs="EPSG:4326")

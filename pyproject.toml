@@ -22,10 +22,8 @@ dependencies = [
   "torch>=2.5.0",
   "torchvision>=0.20.0",
   "tqdm>=4.66.5",
+  "astromorph>=0.1.2",
 ]
-
-[project.optional-dependencies]
-dev = ["pre-commit"]
 
 [project.urls]
 Homepage = "https://github.com/CLEAR-AI-ML-for-shipping-data/ml-analysis"
@@ -37,3 +35,6 @@ src_paths = ["analysis"]
 
 [tool.setuptools]
 packages = ["analysis"]
+
+[dependency-groups]
+dev = ["pre-commit>=4.2.0"]

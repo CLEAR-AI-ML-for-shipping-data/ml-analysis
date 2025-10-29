@@ -37,4 +37,6 @@ src_paths = ["analysis"]
 packages = ["analysis"]
 
 [dependency-groups]
-dev = ["pre-commit>=4.2.0"]
+dev = [
+    "pre-commit>=4.2.0",
+]

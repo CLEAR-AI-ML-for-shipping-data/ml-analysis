@@ -39,6 +39,7 @@ def process_gdf_chunk(
     conv_kernel_size: int = 1,
     heading_col: Optional[str] = None,
     cog_col: Optional[str] = None,
+    scalar_value_cols: Optional[List[str]] = None,
 ):
     for row_nr in trange(df.shape[0], leave=False):
         # image = voyage_array_from_points(
@@ -60,12 +61,18 @@ def process_gdf_chunk(
 
         drift_col = None
         if heading_col is not None and cog_col is not None:
-            drift_col = "drift"
+            drift_col = ["drift"]
             data[heading_col] = voyage_data[heading_col]
             data[cog_col] = voyage_data[cog_col]
             data[drift_col] = (
                 (data[cog_col] - data[heading_col] + 180) % 360
             ) - 180
+
+        if scalar_value_cols is not None:
+            for column in scalar_value_cols:
+                data[column] = voyage_data[column]
+
+        all_value_cols = (scalar_value_cols or []) + (drift_col or [])
 
         dataprep.time_windowing(
             dataf=data,
@@ -73,7 +80,7 @@ def process_gdf_chunk(
             zipfile=hdf5_filename,
             prefix=voyage_data[ship_id_col],
             export_dir=None,
-            value_cols=drift_col,
+            value_cols=all_value_cols,
         )
 
         # image[0] = convolve_image(image[0], kernel_size=conv_kernel_size)
@@ -145,10 +152,16 @@ def main(
 
     ship_id_col = "mmsi"
     coord_col = "coordinates"
+    scalar_value_cols = [
+        "u10",
+    ]  # , "v10", "mwd", "mwp", "swh"]
+    svc_string = ", " + \
+        svc if len(svc := ", ".join(scalar_value_cols)) > 0 else ""
 
     select_boxed_segments = (
         f"SELECT {ship_id_col}, start_dt, end_dt, timestamps, heading, "
-        f"course_over_ground, {coord_col}, ST_Envelope({coord_col}) AS voyage_envelope "
+        f"course_over_ground, {coord_col} {svc_string}, "
+        f"ST_Envelope({coord_col}) AS voyage_envelope "
         f"FROM {segment_table}"
     )
 
@@ -228,7 +241,7 @@ def main(
                     "timestamps",
                     "heading",
                     "course_over_ground",
-                ]
+                ] + scalar_value_cols
             ]
             external_db_dfs = [
                 df[geom_columns].set_geometry(geom_columns[0], crs="EPSG:4326")
@@ -244,6 +257,7 @@ def main(
                 geom_col=coord_col,
                 heading_col="heading",
                 cog_col="course_over_ground",
+                scalar_value_cols=scalar_value_cols,
             )
 
 

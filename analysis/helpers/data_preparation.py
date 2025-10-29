@@ -123,7 +123,7 @@ def voyage_array_from_points(
         value_cols = [
             value_cols,
         ]
-    else:
+    elif value_cols is None:
         value_cols = []
 
     for value_column in value_cols:

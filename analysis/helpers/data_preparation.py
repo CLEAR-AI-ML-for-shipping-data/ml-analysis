@@ -175,6 +175,7 @@ def time_windowing(
     export_dir: Union[str, None] = ".",
     zipfile: Optional[str] = None,
     value_cols: Optional[Union[str, List[str]]] = None,
+    dtype: np.dtype = np.float32,
 ):
     """Create time-windowed snapshots of the voyage, and rasterize the snapshots.
 
@@ -223,6 +224,7 @@ def time_windowing(
                 coastlines=coastlines,
                 filename=filename,
                 value_cols=value_cols,
+                dtype=dtype
             )
 
         if image is not None:

@@ -8,4 +8,4 @@ pydantic==2.9.2
 Shapely>=2.0.6
 toml==0.10.2
 tqdm>=4.66.5
-astropy>=6.0
+astromorph>=0.1.2

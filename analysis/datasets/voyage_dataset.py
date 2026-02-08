@@ -1,12 +1,10 @@
 import pickle
-from typing import List
-from typing import Union
+from typing import List, Union
 
 import numpy as np
 import torch
 from astromorph.datasets.base_dataset import BaseDataset
-from astromorph.datasets.helpers import augment_image
-from astromorph.datasets.helpers import make_4D
+from astromorph.datasets.helpers import augment_image, make_4D
 
 
 class VoyageDataset(BaseDataset):
@@ -45,10 +43,7 @@ class VoyageFilelistDataset(BaseDataset):
         else:
             with open(filelist, "r") as file:
                 # Make sure to remove the newline characters at the end of each filename
-                self.filenames = [
-                    fname.strip("\n")
-                    for fname in file.readlines()
-                ]
+                self.filenames = [fname.strip("\n") for fname in file.readlines()]
 
     def __len__(self):
         return len(self.filenames)

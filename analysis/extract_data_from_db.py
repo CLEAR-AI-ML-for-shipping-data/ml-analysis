@@ -1,19 +1,15 @@
 import argparse
 import math
 from time import perf_counter
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 
 import geopandas as gpd
 import pandas as pd
 from loguru import logger
 from shapely import points
 from shapely.geometry import box
-from sqlalchemy import create_engine
-from sqlalchemy import text
-from tqdm import tqdm
-from tqdm import trange
+from sqlalchemy import create_engine, text
+from tqdm import tqdm, trange
 
 from helpers import data_preparation as dataprep
 
@@ -39,6 +35,7 @@ def process_gdf_chunk(
     conv_kernel_size: int = 1,
     heading_col: Optional[str] = None,
     cog_col: Optional[str] = None,
+    scalar_value_cols: Optional[List[str]] = None,
 ):
     for row_nr in trange(df.shape[0], leave=False):
         # image = voyage_array_from_points(
@@ -60,12 +57,16 @@ def process_gdf_chunk(
 
         drift_col = None
         if heading_col is not None and cog_col is not None:
-            drift_col = "drift"
+            drift_col = ["drift"]
             data[heading_col] = voyage_data[heading_col]
             data[cog_col] = voyage_data[cog_col]
-            data[drift_col] = (
-                (data[cog_col] - data[heading_col] + 180) % 360
-            ) - 180
+            data[drift_col] = ((data[cog_col] - data[heading_col] + 180) % 360) - 180
+
+        if scalar_value_cols is not None:
+            for column in scalar_value_cols:
+                data[column] = voyage_data[column]
+
+        all_value_cols = (scalar_value_cols or []) + (drift_col or [])
 
         dataprep.time_windowing(
             dataf=data,
@@ -73,7 +74,7 @@ def process_gdf_chunk(
             zipfile=hdf5_filename,
             prefix=voyage_data[ship_id_col],
             export_dir=None,
-            value_cols=drift_col,
+            value_cols=all_value_cols,
         )
 
         # image[0] = convolve_image(image[0], kernel_size=conv_kernel_size)
@@ -145,10 +146,15 @@ def main(
 
     ship_id_col = "mmsi"
     coord_col = "coordinates"
+    scalar_value_cols = [
+        "u10",
+    ]  # , "v10", "mwd", "mwp", "swh"]
+    svc_string = ", " + svc if len(svc := ", ".join(scalar_value_cols)) > 0 else ""
 
     select_boxed_segments = (
         f"SELECT {ship_id_col}, start_dt, end_dt, timestamps, heading, "
-        f"course_over_ground, {coord_col}, ST_Envelope({coord_col}) AS voyage_envelope "
+        f"course_over_ground, {coord_col} {svc_string}, "
+        f"ST_Envelope({coord_col}) AS voyage_envelope "
         f"FROM {segment_table}"
     )
 
@@ -182,7 +188,6 @@ def main(
     query_string = f"{select_string} {from_string} {where_string} "
 
     with engine.connect() as conn:
-
         total_rows = conn.execute(
             text(f"select count(*) {from_string} {where_string}"),
         ).scalar()
@@ -229,6 +234,7 @@ def main(
                     "heading",
                     "course_over_ground",
                 ]
+                + scalar_value_cols
             ]
             external_db_dfs = [
                 df[geom_columns].set_geometry(geom_columns[0], crs="EPSG:4326")
@@ -244,6 +250,7 @@ def main(
                 geom_col=coord_col,
                 heading_col="heading",
                 cog_col="course_over_ground",
+                scalar_value_cols=scalar_value_cols,
             )
 
 

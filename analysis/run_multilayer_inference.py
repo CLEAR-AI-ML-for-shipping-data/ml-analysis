@@ -58,7 +58,9 @@ def main(
     device = (
         "cuda"
         if torch.cuda.is_available()
-        else "mps" if torch.backends.mps.is_available() else "cpu"
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
     )
     device = "cpu"
     logger.info("Using device {}", device)
@@ -141,10 +143,7 @@ def main(
         thumbnail_size = 39
         thumbnail_size = 215
 
-        resized = [
-            create_thumbnail(image, thumbnail_size)
-            for image in plot_images
-        ]
+        resized = [create_thumbnail(image, thumbnail_size) for image in plot_images]
 
         # Concatenate thumbnails into a single tensor for labelling the embeddings
         all_ims = torch.cat(resized)
@@ -164,9 +163,7 @@ def main(
             headers = ["cluster_label"]
             labels = [[label] for label in cluster_labels]
 
-        embedding_columns = [
-            f"emb_dim_{i}" for i in range(embeddings.shape[1])
-        ]
+        embedding_columns = [f"emb_dim_{i}" for i in range(embeddings.shape[1])]
         df_embeddings = pd.DataFrame(
             columns=embedding_columns,
             data=embeddings.cpu(),

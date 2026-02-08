@@ -57,10 +57,11 @@ def process_gdf_chunk(
 
         drift_col = None
         if heading_col is not None and cog_col is not None:
-            drift_col = ["drift"]
+            drift_col = "drift"
             data[heading_col] = voyage_data[heading_col]
             data[cog_col] = voyage_data[cog_col]
             data[drift_col] = ((data[cog_col] - data[heading_col] + 180) % 360) - 180
+            drift_col = [drift_col]
 
         if scalar_value_cols is not None:
             for column in scalar_value_cols:
@@ -142,12 +143,12 @@ def main(
     #   [...]
     # ]
 
-    segment_table = "trajectories_2023_02"
+    segment_table = "trajectories_2021_01"
 
     ship_id_col = "mmsi"
     coord_col = "coordinates"
     scalar_value_cols = [
-        "u10",
+        # "u10",
     ]  # , "v10", "mwd", "mwp", "swh"]
     svc_string = ", " + svc if len(svc := ", ".join(scalar_value_cols)) > 0 else ""
 

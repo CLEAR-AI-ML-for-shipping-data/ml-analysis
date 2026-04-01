@@ -205,7 +205,11 @@ def time_windowing(
     images: List[np.ndarray] = []
     for start_time in timesteps:
         image = None
-        data = dataf.loc[start_time: start_time + window_size]
+
+        try:
+            data = dataf.loc[start_time: start_time + window_size]
+        except KeyError:
+            data = dataf[(dataf.index >= start_time) & (dataf.index <= start_time + window_size)]
 
         start_string = start_time.strftime("%Y%m%d_%H%M%S")
         end_string = (start_time + window_size).strftime("%Y%m%d_%H%M%S")
